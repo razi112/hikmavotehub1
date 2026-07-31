@@ -13,7 +13,7 @@ export const Route = createFileRoute("/candidates")({
       {
         name: "description",
         content:
-          "Meet every candidate standing for President, Vice President, Secretary, Joint Secretary, Working Secretary and Treasurer.",
+          "Meet every candidate standing for President, Secretary and Treasurer.",
       },
       { property: "og:title", content: "Meet the candidates — Hikma Vote" },
       {
