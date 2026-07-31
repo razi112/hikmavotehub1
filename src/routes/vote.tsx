@@ -147,26 +147,49 @@ function VotePage() {
               </span>
               <h2 className="mt-4 font-display text-xl font-semibold">Student sign in</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter the admission number issued by the election committee.
+                Find and select your name from the voter list.
               </p>
-              <div className="mt-5 space-y-2">
-                <Label htmlFor="admission">Admission number</Label>
+              <div className="mt-5 space-y-3">
                 <Input
-                  id="admission"
-                  value={admissionNumber}
-                  onChange={(e) => setAdmissionNumber(e.target.value)}
-                  placeholder="e.g. HK001"
+                  value={voterSearch}
+                  onChange={(e) => setVoterSearch(e.target.value)}
+                  placeholder="Search your name…"
                   autoComplete="off"
-                  required
                   className="h-12 rounded-xl text-base"
                 />
+                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border border-border/60 p-2">
+                  {voters.isLoading && <Skeleton className="h-12 rounded-xl" />}
+                  {!voters.isLoading && filteredVoters.length === 0 && (
+                    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      No matching voter found.
+                    </p>
+                  )}
+                  {filteredVoters.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVoter(v.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
+                        v.id === selectedVoter
+                          ? "gradient-primary text-primary-foreground shadow-soft"
+                          : "hover:bg-muted/60",
+                      )}
+                    >
+                      <span className="truncate font-medium">{v.name}</span>
+                      {v.className && (
+                        <span className="ml-3 shrink-0 text-xs opacity-70">{v.className}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
               <Button
                 type="submit"
                 variant="hero"
                 size="xl"
                 className="mt-5 w-full"
-                disabled={busy || !admissionNumber.trim()}
+                disabled={busy || !selectedVoter}
               >
                 {busy ? "Checking…" : "Continue"}
               </Button>
