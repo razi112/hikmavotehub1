@@ -13,7 +13,7 @@ export const Route = createFileRoute("/candidates")({
       {
         name: "description",
         content:
-          "Meet every candidate standing for President, Vice President, Secretary, Joint Secretary, Working Secretary and Treasurer.",
+          "Meet every candidate standing for President, Secretary and Treasurer.",
       },
       { property: "og:title", content: "Meet the candidates — Hikma Vote" },
       {
@@ -38,7 +38,7 @@ function CandidatesPage() {
           <header className="animate-rise max-w-2xl">
             <h1 className="font-display text-3xl font-bold sm:text-4xl">The candidates</h1>
             <p className="mt-3 text-muted-foreground">
-              Six executive positions. Read each manifesto, then head to the voting page.
+              Three executive positions. Read each manifesto, then head to the voting page.
             </p>
           </header>
 
