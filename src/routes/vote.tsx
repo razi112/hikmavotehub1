@@ -208,8 +208,7 @@ function VotePage() {
                 <div className="min-w-0">
                   <p className="truncate font-display font-semibold">{session.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {session.admissionNumber}
-                    {session.className ? ` · ${session.className}` : ""} ·{" "}
+                    {session.className ? `${session.className} · ` : ""}
                     {voted.size} of {positions.data?.length ?? 0} positions voted
                   </p>
                 </div>
