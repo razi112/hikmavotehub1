@@ -75,6 +75,12 @@ function VotePage() {
     if (!activePosition && positions.data?.length) setActivePosition(positions.data[0].id);
   }, [positions.data, activePosition]);
 
+  const filteredVoters = useMemo(() => {
+    const list = voters.data ?? [];
+    const q = voterSearch.trim().toLowerCase();
+    return q ? list.filter((v) => v.name.toLowerCase().includes(q)) : list;
+  }, [voters.data, voterSearch]);
+
   const voted = useMemo(() => new Set(session?.votedPositionIds ?? []), [session]);
   const closed = settings.data ? settings.data.election_status !== "open" : false;
 
