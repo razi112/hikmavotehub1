@@ -87,7 +87,7 @@ function AuthPage() {
               {mode === "signin" ? "Committee sign in" : "Create committee account"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Admin access only. Students vote with their admission number.
+              Admin access only. Students vote by selecting their name.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">

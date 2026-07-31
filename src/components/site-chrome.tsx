@@ -8,7 +8,6 @@ const links = [
   { to: "/", label: "Home" },
   { to: "/candidates", label: "Candidates" },
   { to: "/vote", label: "Vote" },
-  { to: "/results", label: "Results" },
 ] as const;
 
 export function SiteHeader() {
