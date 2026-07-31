@@ -146,3 +146,25 @@ export async function buildTally(): Promise<Tally> {
     hourly,
   };
 }
+
+export type VoterOption = {
+  id: string;
+  name: string;
+  className: string | null;
+};
+
+export async function listVoters(): Promise<VoterOption[]> {
+  const { data, error } = await supabaseAdmin
+    .from("students")
+    .select("id, name, class")
+    .eq("is_blocked", false)
+    .order("name");
+  if (error) throw new Error("Could not load the voter list.");
+  return (data ?? []).map((s) => ({ id: s.id, name: s.name, className: s.class }));
+}
+
+export async function loginStudentById(studentId: string): Promise<StudentSessionData> {
+  const session = await refreshStudent(studentId);
+  if (!session) throw new Error("This voter is not eligible to vote.");
+  return session;
+}
