@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -9,7 +9,6 @@ import { Confetti } from "@/components/confetti";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -21,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { castVote, studentLogin, studentRefresh } from "@/lib/election.functions";
+import { castVote, getVoters, studentLoginById, studentRefresh } from "@/lib/election.functions";
 import { candidatesQuery, positionsQuery, settingsQuery } from "@/lib/queries";
 import { useStudentSession } from "@/lib/student-session";
 import { cn } from "@/lib/utils";
@@ -33,7 +32,7 @@ export const Route = createFileRoute("/vote")({
       {
         name: "description",
         content:
-          "Sign in with your admission number and cast one secure vote for each executive committee position.",
+          "Select your name from the voter list and cast one secure vote for each executive committee position.",
       },
       { property: "og:title", content: "Cast your vote — Hikma Vote" },
       {
@@ -51,11 +50,14 @@ function VotePage() {
   const positions = useQuery(positionsQuery());
   const candidates = useQuery(candidatesQuery());
 
-  const login = useServerFn(studentLogin);
+  const login = useServerFn(studentLoginById);
+  const loadVoters = useServerFn(getVoters);
+  const voters = useQuery({ queryKey: ["voters"], queryFn: () => loadVoters({}) });
   const refresh = useServerFn(studentRefresh);
   const vote = useServerFn(castVote);
 
-  const [admissionNumber, setAdmissionNumber] = useState("");
+  const [voterSearch, setVoterSearch] = useState("");
+  const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activePosition, setActivePosition] = useState<string | null>(null);
   const [pending, setPending] = useState<{ id: string; name: string } | null>(null);
@@ -73,6 +75,12 @@ function VotePage() {
     if (!activePosition && positions.data?.length) setActivePosition(positions.data[0].id);
   }, [positions.data, activePosition]);
 
+  const filteredVoters = useMemo(() => {
+    const list = voters.data ?? [];
+    const q = voterSearch.trim().toLowerCase();
+    return q ? list.filter((v) => v.name.toLowerCase().includes(q)) : list;
+  }, [voters.data, voterSearch]);
+
   const voted = useMemo(() => new Set(session?.votedPositionIds ?? []), [session]);
   const closed = settings.data ? settings.data.election_status !== "open" : false;
 
@@ -80,7 +88,8 @@ function VotePage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const result = await login({ data: { admissionNumber } });
+      if (!selectedVoter) return;
+      const result = await login({ data: { studentId: selectedVoter } });
       save(result);
       toast.success(`Welcome, ${result.name}`);
     } catch (err) {
@@ -144,26 +153,49 @@ function VotePage() {
               </span>
               <h2 className="mt-4 font-display text-xl font-semibold">Student sign in</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter the admission number issued by the election committee.
+                Find and select your name from the voter list.
               </p>
-              <div className="mt-5 space-y-2">
-                <Label htmlFor="admission">Admission number</Label>
+              <div className="mt-5 space-y-3">
                 <Input
-                  id="admission"
-                  value={admissionNumber}
-                  onChange={(e) => setAdmissionNumber(e.target.value)}
-                  placeholder="e.g. HK001"
+                  value={voterSearch}
+                  onChange={(e) => setVoterSearch(e.target.value)}
+                  placeholder="Search your name…"
                   autoComplete="off"
-                  required
                   className="h-12 rounded-xl text-base"
                 />
+                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border border-border/60 p-2">
+                  {voters.isLoading && <Skeleton className="h-12 rounded-xl" />}
+                  {!voters.isLoading && filteredVoters.length === 0 && (
+                    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      No matching voter found.
+                    </p>
+                  )}
+                  {filteredVoters.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVoter(v.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
+                        v.id === selectedVoter
+                          ? "gradient-primary text-primary-foreground shadow-soft"
+                          : "hover:bg-muted/60",
+                      )}
+                    >
+                      <span className="truncate font-medium">{v.name}</span>
+                      {v.className && (
+                        <span className="ml-3 shrink-0 text-xs opacity-70">{v.className}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
               <Button
                 type="submit"
                 variant="hero"
                 size="xl"
                 className="mt-5 w-full"
-                disabled={busy || !admissionNumber.trim()}
+                disabled={busy || !selectedVoter}
               >
                 {busy ? "Checking…" : "Continue"}
               </Button>
@@ -176,8 +208,7 @@ function VotePage() {
                 <div className="min-w-0">
                   <p className="truncate font-display font-semibold">{session.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {session.admissionNumber}
-                    {session.className ? ` · ${session.className}` : ""} ·{" "}
+                    {session.className ? `${session.className} · ` : ""}
                     {voted.size} of {positions.data?.length ?? 0} positions voted
                   </p>
                 </div>
@@ -199,9 +230,6 @@ function VotePage() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     You have completed every available position.
                   </p>
-                  <Button asChild variant="gold" size="lg" className="mt-6">
-                    <Link to="/results">See live results</Link>
-                  </Button>
                 </div>
               )}
 

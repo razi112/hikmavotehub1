@@ -137,7 +137,7 @@ function Home() {
               {
                 icon: Sparkles,
                 title: "How it works",
-                body: "Sign in with your admission number, pick a candidate for each position, and confirm your vote.",
+                body: "Select your name from the voter list, pick a candidate for each position, and confirm your vote.",
               },
             ].map((f, i) => (
               <Reveal key={f.title} delay={i * 120}>
@@ -164,7 +164,7 @@ function Home() {
                 Ready to make your voice count?
               </h2>
               <p className="relative mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
-                Voting takes less than a minute. All you need is your admission number.
+                Voting takes less than a minute. Just find your name on the voter list.
               </p>
               <Button asChild variant="gold" size="xl" className="relative mt-7 w-full sm:w-auto">
                 <Link to="/vote">Start voting</Link>

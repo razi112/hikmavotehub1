@@ -28,3 +28,15 @@ export const getTally = createServerFn({ method: "GET" }).handler(async () => {
   const { buildTally } = await import("./election.server");
   return buildTally();
 });
+
+export const getVoters = createServerFn({ method: "GET" }).handler(async () => {
+  const { listVoters } = await import("./election.server");
+  return listVoters();
+});
+
+export const studentLoginById = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ studentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { loginStudentById } = await import("./election.server");
+    return loginStudentById(data.studentId);
+  });
