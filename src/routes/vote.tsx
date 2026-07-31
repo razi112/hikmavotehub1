@@ -9,7 +9,6 @@ import { Confetti } from "@/components/confetti";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -21,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { castVote, studentLogin, studentRefresh } from "@/lib/election.functions";
+import { castVote, getVoters, studentLoginById, studentRefresh } from "@/lib/election.functions";
 import { candidatesQuery, positionsQuery, settingsQuery } from "@/lib/queries";
 import { useStudentSession } from "@/lib/student-session";
 import { cn } from "@/lib/utils";
@@ -33,7 +32,7 @@ export const Route = createFileRoute("/vote")({
       {
         name: "description",
         content:
-          "Sign in with your admission number and cast one secure vote for each executive committee position.",
+          "Select your name from the voter list and cast one secure vote for each executive committee position.",
       },
       { property: "og:title", content: "Cast your vote — Hikma Vote" },
       {
@@ -51,11 +50,14 @@ function VotePage() {
   const positions = useQuery(positionsQuery());
   const candidates = useQuery(candidatesQuery());
 
-  const login = useServerFn(studentLogin);
+  const login = useServerFn(studentLoginById);
+  const loadVoters = useServerFn(getVoters);
+  const voters = useQuery({ queryKey: ["voters"], queryFn: () => loadVoters({}) });
   const refresh = useServerFn(studentRefresh);
   const vote = useServerFn(castVote);
 
-  const [admissionNumber, setAdmissionNumber] = useState("");
+  const [voterSearch, setVoterSearch] = useState("");
+  const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activePosition, setActivePosition] = useState<string | null>(null);
   const [pending, setPending] = useState<{ id: string; name: string } | null>(null);
@@ -80,7 +82,8 @@ function VotePage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const result = await login({ data: { admissionNumber } });
+      if (!selectedVoter) return;
+      const result = await login({ data: { studentId: selectedVoter } });
       save(result);
       toast.success(`Welcome, ${result.name}`);
     } catch (err) {
@@ -199,9 +202,6 @@ function VotePage() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     You have completed every available position.
                   </p>
-                  <Button asChild variant="gold" size="lg" className="mt-6">
-                    <Link to="/results">See live results</Link>
-                  </Button>
                 </div>
               )}
 
