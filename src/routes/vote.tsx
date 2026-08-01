@@ -72,9 +72,6 @@ function VotePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.studentId]);
 
-  useEffect(() => {
-    if (!activePosition && positions.data?.length) setActivePosition(positions.data[0].id);
-  }, [positions.data, activePosition]);
 
   const filteredVoters = useMemo(() => {
     const list = voters.data ?? [];
