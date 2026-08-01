@@ -114,10 +114,6 @@ function VotePage() {
     }
   }
 
-  const currentList = (candidates.data ?? []).filter(
-    (c) => c.position_id === activePosition && c.is_active,
-  );
-  const currentPosition = positions.data?.find((p) => p.id === activePosition);
   const allDone =
     !!positions.data?.length && positions.data.every((p) => voted.has(p.id) || !hasCandidates(p.id));
 
