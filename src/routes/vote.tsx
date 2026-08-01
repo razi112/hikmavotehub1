@@ -286,7 +286,7 @@ function VotePage() {
             <AlertDialogTitle className="font-display">Confirm your vote</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to vote for <strong>{pending?.name}</strong> as{" "}
-              {currentPosition?.title}? This action cannot be undone.
+              {pending?.position}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
