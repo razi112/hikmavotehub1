@@ -59,8 +59,9 @@ function VotePage() {
   const [voterSearch, setVoterSearch] = useState("");
   const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [activePosition, setActivePosition] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ id: string; name: string } | null>(null);
+  const [pending, setPending] = useState<{ id: string; name: string; position: string } | null>(
+    null,
+  );
   const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
@@ -71,9 +72,6 @@ function VotePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.studentId]);
 
-  useEffect(() => {
-    if (!activePosition && positions.data?.length) setActivePosition(positions.data[0].id);
-  }, [positions.data, activePosition]);
 
   const filteredVoters = useMemo(() => {
     const list = voters.data ?? [];
@@ -116,10 +114,6 @@ function VotePage() {
     }
   }
 
-  const currentList = (candidates.data ?? []).filter(
-    (c) => c.position_id === activePosition && c.is_active,
-  );
-  const currentPosition = positions.data?.find((p) => p.id === activePosition);
   const allDone =
     !!positions.data?.length && positions.data.every((p) => voted.has(p.id) || !hasCandidates(p.id));
 
@@ -233,57 +227,53 @@ function VotePage() {
                 </div>
               )}
 
-              <nav className="mt-8 flex gap-2 overflow-x-auto pb-2">
-                {(positions.data ?? []).map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setActivePosition(p.id)}
-                    className={cn(
-                      "shrink-0 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-300",
-                      p.id === activePosition
-                        ? "gradient-primary text-primary-foreground shadow-soft"
-                        : "glass text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {p.title}
-                    {voted.has(p.id) && " ✓"}
-                  </button>
-                ))}
-              </nav>
+              <section className="mt-8 space-y-10">
+                {(positions.data ?? []).map((p) => {
+                  const list = (candidates.data ?? []).filter(
+                    (c) => c.position_id === p.id && c.is_active,
+                  );
+                  return (
+                    <div key={p.id}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h2 className="font-display text-xl font-semibold">{p.title}</h2>
+                        {voted.has(p.id) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Voted
+                          </span>
+                        )}
+                      </div>
 
-              <section className="mt-6">
-                <h2 className="font-display text-xl font-semibold">
-                  Step 2 · Select your {currentPosition?.title ?? "candidate"}
-                </h2>
-
-                {voted.has(activePosition ?? "") ? (
-                  <div className="glass mt-5 rounded-3xl px-6 py-10 text-center">
-                    <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
-                    <p className="mt-3 font-medium">
-                      Your vote for {currentPosition?.title} is locked in.
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Votes cannot be changed after submission.
-                    </p>
-                  </div>
-                ) : currentList.length === 0 ? (
-                  <div className="glass mt-5 rounded-3xl px-6 py-10 text-center text-sm text-muted-foreground">
-                    No candidates have been announced for this position yet.
-                  </div>
-                ) : (
-                  <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {currentList.map((c) => (
-                      <CandidateCard
-                        key={c.id}
-                        candidate={c}
-                        positionTitle={currentPosition?.title}
-                        disabled={closed}
-                        disabledLabel="Voting closed"
-                        onVote={() => setPending({ id: c.id, name: c.name })}
-                      />
-                    ))}
-                  </div>
-                )}
+                      {voted.has(p.id) ? (
+                        <div className="glass mt-4 rounded-3xl px-6 py-8 text-center">
+                          <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
+                          <p className="mt-3 font-medium">Your vote for {p.title} is locked in.</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Votes cannot be changed after submission.
+                          </p>
+                        </div>
+                      ) : list.length === 0 ? (
+                        <div className="glass mt-4 rounded-3xl px-6 py-8 text-center text-sm text-muted-foreground">
+                          No candidates have been announced for this position yet.
+                        </div>
+                      ) : (
+                        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                          {list.map((c) => (
+                            <CandidateCard
+                              key={c.id}
+                              candidate={c}
+                              positionTitle={p.title}
+                              disabled={closed}
+                              disabledLabel="Voting closed"
+                              onVote={() =>
+                                setPending({ id: c.id, name: c.name, position: p.title })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </section>
             </>
           )}
@@ -296,7 +286,7 @@ function VotePage() {
             <AlertDialogTitle className="font-display">Confirm your vote</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to vote for <strong>{pending?.name}</strong> as{" "}
-              {currentPosition?.title}? This action cannot be undone.
+              {pending?.position}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
