@@ -170,18 +170,33 @@ function VotePage() {
                       type="button"
                       onClick={() => setSelectedVoter(v.id)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
+                        "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
                         v.id === selectedVoter
                           ? "gradient-primary text-primary-foreground shadow-soft"
                           : "hover:bg-muted/60",
                       )}
                     >
-                      <span className="truncate font-medium">{v.name}</span>
-                      {v.className && (
-                        <span className="ml-3 shrink-0 text-xs opacity-70">{v.className}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{v.name}</span>
+                        {v.className && (
+                          <span className="block truncate text-xs opacity-70">{v.className}</span>
+                        )}
+                      </span>
+                      {v.positionTitle && (
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
+                            v.id === selectedVoter
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-primary/10 text-primary",
+                          )}
+                        >
+                          {v.positionTitle}
+                        </span>
                       )}
                     </button>
                   ))}
+
                 </div>
               </div>
               <Button
