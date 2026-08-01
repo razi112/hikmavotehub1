@@ -76,8 +76,15 @@ function VotePage() {
   const filteredVoters = useMemo(() => {
     const list = voters.data ?? [];
     const q = voterSearch.trim().toLowerCase();
-    return q ? list.filter((v) => v.name.toLowerCase().includes(q)) : list;
+    return q
+      ? list.filter(
+          (v) =>
+            v.name.toLowerCase().includes(q) ||
+            (v.positionTitle ?? "").toLowerCase().includes(q),
+        )
+      : list;
   }, [voters.data, voterSearch]);
+
 
   const voted = useMemo(() => new Set(session?.votedPositionIds ?? []), [session]);
   const closed = settings.data ? settings.data.election_status !== "open" : false;
