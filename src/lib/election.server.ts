@@ -151,17 +151,35 @@ export type VoterOption = {
   id: string;
   name: string;
   className: string | null;
+  positionTitle: string | null;
 };
 
 export async function listVoters(): Promise<VoterOption[]> {
-  const { data, error } = await supabaseAdmin
-    .from("students")
-    .select("id, name, class")
-    .eq("is_blocked", false)
-    .order("name");
-  if (error) throw new Error("Could not load the voter list.");
-  return (data ?? []).map((s) => ({ id: s.id, name: s.name, className: s.class }));
+  const [studentsRes, candidatesRes] = await Promise.all([
+    supabaseAdmin
+      .from("students")
+      .select("id, name, class")
+      .eq("is_blocked", false)
+      .order("name"),
+    supabaseAdmin.from("candidates").select("name, is_active, positions(title)"),
+  ]);
+
+  if (studentsRes.error) throw new Error("Could not load the voter list.");
+
+  const positionByName = new Map<string, string>();
+  for (const c of candidatesRes.data ?? []) {
+    const title = (c as { positions?: { title?: string } | null }).positions?.title;
+    if (c.is_active && title) positionByName.set(c.name.trim().toLowerCase(), title);
+  }
+
+  return (studentsRes.data ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    className: s.class,
+    positionTitle: positionByName.get(s.name.trim().toLowerCase()) ?? null,
+  }));
 }
+
 
 export async function loginStudentById(studentId: string): Promise<StudentSessionData> {
   const session = await refreshStudent(studentId);
