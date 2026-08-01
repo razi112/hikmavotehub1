@@ -59,8 +59,9 @@ function VotePage() {
   const [voterSearch, setVoterSearch] = useState("");
   const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [activePosition, setActivePosition] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ id: string; name: string } | null>(null);
+  const [pending, setPending] = useState<{ id: string; name: string; position: string } | null>(
+    null,
+  );
   const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
