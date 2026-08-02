@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { CandidateCard } from "@/components/candidate-card";
+
 import { Confetti } from "@/components/confetti";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
@@ -282,15 +282,15 @@ function VotePage() {
                 </div>
               )}
 
-              <section className="mt-8 space-y-10">
+              <section className="mt-8 space-y-6">
                 {(positions.data ?? []).map((p) => {
                   const list = (candidates.data ?? []).filter(
                     (c) => c.position_id === p.id && c.is_active,
                   );
                   return (
-                    <div key={p.id}>
+                    <div key={p.id} className="glass rounded-3xl p-5">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="font-display text-xl font-semibold">{p.title}</h2>
+                        <h2 className="font-display text-lg font-semibold">{p.title}</h2>
                         {voted.has(p.id) && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                             <CheckCircle2 className="h-3.5 w-3.5" /> Voted
@@ -299,38 +299,49 @@ function VotePage() {
                       </div>
 
                       {voted.has(p.id) ? (
-                        <div className="glass mt-4 rounded-3xl px-6 py-8 text-center">
-                          <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
-                          <p className="mt-3 font-medium">Your vote for {p.title} is locked in.</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Votes cannot be changed after submission.
-                          </p>
-                        </div>
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          Your vote for {p.title} is locked in and cannot be changed.
+                        </p>
                       ) : list.length === 0 ? (
-                        <div className="glass mt-4 rounded-3xl px-6 py-8 text-center text-sm text-muted-foreground">
+                        <p className="mt-3 text-sm text-muted-foreground">
                           No candidates have been announced for this position yet.
-                        </div>
+                        </p>
                       ) : (
-                        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                          {list.map((c) => (
-                            <CandidateCard
-                              key={c.id}
-                              candidate={c}
-                              positionTitle={p.title}
-                              disabled={closed}
-                              selected={selections[p.id] === c.id}
-                              disabledLabel="Voting closed"
-                              onVote={() =>
-                                setSelections((s) => ({ ...s, [p.id]: c.id }))
-                              }
-                            />
-                          ))}
+                        <div className="mt-4 space-y-2">
+                          {list.map((c) => {
+                            const active = selections[p.id] === c.id;
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={closed}
+                                onClick={() => setSelections((s) => ({ ...s, [p.id]: c.id }))}
+                                className={cn(
+                                  "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
+                                  active
+                                    ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
+                                    : "border-border/60 hover:bg-muted/60",
+                                )}
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-medium">{c.name}</span>
+                                  {c.class && (
+                                    <span className="block truncate text-xs opacity-70">
+                                      {c.class}
+                                    </span>
+                                  )}
+                                </span>
+                                {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
                   );
                 })}
               </section>
+
 
               {!allDone && openPositions.length > 0 && (
                 <div className="glass sticky bottom-4 mt-8 flex flex-col gap-3 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
