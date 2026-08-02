@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { CandidateCard } from "@/components/candidate-card";
+
 import { Confetti } from "@/components/confetti";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
