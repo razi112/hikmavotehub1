@@ -59,9 +59,8 @@ function VotePage() {
   const [voterSearch, setVoterSearch] = useState("");
   const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<{ id: string; name: string; position: string } | null>(
-    null,
-  );
+  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
@@ -85,6 +84,22 @@ function VotePage() {
       : list;
   }, [voters.data, voterSearch]);
 
+  const voterSections = useMemo(() => {
+    const order = (positions.data ?? []).map((p) => p.title);
+    const groups = new Map<string, typeof filteredVoters>();
+    for (const v of filteredVoters) {
+      const key = v.positionTitle ?? "Other";
+      const arr = groups.get(key) ?? [];
+      arr.push(v);
+      groups.set(key, arr);
+    }
+    return Array.from(groups.entries()).sort((a, b) => {
+      const ai = order.indexOf(a[0]);
+      const bi = order.indexOf(b[0]);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+  }, [filteredVoters, positions.data]);
+
 
   const voted = useMemo(() => new Set(session?.votedPositionIds ?? []), [session]);
   const closed = settings.data ? settings.data.election_status !== "open" : false;
@@ -104,16 +119,36 @@ function VotePage() {
     }
   }
 
+  function hasCandidates(positionId: string) {
+    return (candidates.data ?? []).some((c) => c.position_id === positionId && c.is_active);
+  }
+
+  const openPositions = useMemo(
+    () => (positions.data ?? []).filter((p) => !voted.has(p.id) && hasCandidates(p.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [positions.data, candidates.data, voted],
+  );
+
+  const allSelected =
+    openPositions.length > 0 && openPositions.every((p) => !!selections[p.id]);
+
   async function confirmVote() {
-    if (!pending || !session) return;
+    if (!session || !allSelected) return;
     setBusy(true);
     try {
-      const result = await vote({ data: { studentId: session.studentId, candidateId: pending.id } });
-      save({ ...session, votedPositionIds: result.votedPositionIds });
-      setPending(null);
+      let votedIds = session.votedPositionIds;
+      for (const p of openPositions) {
+        const result = await vote({
+          data: { studentId: session.studentId, candidateId: selections[p.id] },
+        });
+        votedIds = result.votedPositionIds;
+      }
+      save({ ...session, votedPositionIds: votedIds });
+      setSelections({});
+      setConfirmOpen(false);
       setCelebrate(true);
       window.setTimeout(() => setCelebrate(false), 4200);
-      toast.success("Vote submitted successfully");
+      toast.success("Votes submitted successfully");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Vote failed");
     } finally {
@@ -124,9 +159,6 @@ function VotePage() {
   const allDone =
     !!positions.data?.length && positions.data.every((p) => voted.has(p.id) || !hasCandidates(p.id));
 
-  function hasCandidates(positionId: string) {
-    return (candidates.data ?? []).some((c) => c.position_id === positionId && c.is_active);
-  }
 
   return (
     <div className="min-h-screen">
@@ -171,38 +203,39 @@ function VotePage() {
                       No matching voter found.
                     </p>
                   )}
-                  {filteredVoters.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setSelectedVoter(v.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
-                        v.id === selectedVoter
-                          ? "gradient-primary text-primary-foreground shadow-soft"
-                          : "hover:bg-muted/60",
-                      )}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{v.name}</span>
-                        {v.className && (
-                          <span className="block truncate text-xs opacity-70">{v.className}</span>
-                        )}
-                      </span>
-                      {v.positionTitle && (
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
-                            v.id === selectedVoter
-                              ? "bg-primary-foreground/20 text-primary-foreground"
-                              : "bg-primary/10 text-primary",
-                          )}
-                        >
-                          {v.positionTitle}
-                        </span>
-                      )}
-                    </button>
+                  {voterSections.map(([title, list]) => (
+                    <div key={title} className="pt-1">
+                      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {title}
+                      </p>
+                      <div className="space-y-1.5">
+                        {list.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setSelectedVoter(v.id)}
+                            className={cn(
+                              "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
+                              v.id === selectedVoter
+                                ? "gradient-primary text-primary-foreground shadow-soft"
+                                : "hover:bg-muted/60",
+                            )}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">{v.name}</span>
+                              {v.className && (
+                                <span className="block truncate text-xs opacity-70">
+                                  {v.className}
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
+
+
 
                 </div>
               </div>
@@ -285,9 +318,10 @@ function VotePage() {
                               candidate={c}
                               positionTitle={p.title}
                               disabled={closed}
+                              selected={selections[p.id] === c.id}
                               disabledLabel="Voting closed"
                               onVote={() =>
-                                setPending({ id: c.id, name: c.name, position: p.title })
+                                setSelections((s) => ({ ...s, [p.id]: c.id }))
                               }
                             />
                           ))}
@@ -297,20 +331,46 @@ function VotePage() {
                   );
                 })}
               </section>
+
+              {!allDone && openPositions.length > 0 && (
+                <div className="glass sticky bottom-4 mt-8 flex flex-col gap-3 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {Object.keys(selections).filter((k) => openPositions.some((p) => p.id === k))
+                      .length}{" "}
+                    of {openPositions.length} positions selected. Select one candidate for every
+                    position to submit.
+                  </p>
+                  <Button
+                    variant="hero"
+                    size="lg"
+                    disabled={!allSelected || closed || busy}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Submit votes
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
       </main>
 
-      <AlertDialog open={!!pending} onOpenChange={(o) => !o && setPending(null)}>
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !o && setConfirmOpen(false)}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display">Confirm your vote</AlertDialogTitle>
+            <AlertDialogTitle className="font-display">Confirm your votes</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to vote for <strong>{pending?.name}</strong> as{" "}
-              {pending?.position}? This action cannot be undone.
+              You are voting for{" "}
+              {openPositions
+                .map((p) => {
+                  const c = (candidates.data ?? []).find((x) => x.id === selections[p.id]);
+                  return `${c?.name ?? ""} (${p.title})`;
+                })
+                .join(", ")}
+              . This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
             <AlertDialogAction
