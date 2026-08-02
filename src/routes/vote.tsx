@@ -318,9 +318,10 @@ function VotePage() {
                               candidate={c}
                               positionTitle={p.title}
                               disabled={closed}
+                              selected={selections[p.id] === c.id}
                               disabledLabel="Voting closed"
                               onVote={() =>
-                                setPending({ id: c.id, name: c.name, position: p.title })
+                                setSelections((s) => ({ ...s, [p.id]: c.id }))
                               }
                             />
                           ))}
@@ -330,20 +331,46 @@ function VotePage() {
                   );
                 })}
               </section>
+
+              {!allDone && openPositions.length > 0 && (
+                <div className="glass sticky bottom-4 mt-8 flex flex-col gap-3 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {Object.keys(selections).filter((k) => openPositions.some((p) => p.id === k))
+                      .length}{" "}
+                    of {openPositions.length} positions selected. Select one candidate for every
+                    position to submit.
+                  </p>
+                  <Button
+                    variant="hero"
+                    size="lg"
+                    disabled={!allSelected || closed || busy}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Submit votes
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
       </main>
 
-      <AlertDialog open={!!pending} onOpenChange={(o) => !o && setPending(null)}>
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !o && setConfirmOpen(false)}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display">Confirm your vote</AlertDialogTitle>
+            <AlertDialogTitle className="font-display">Confirm your votes</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to vote for <strong>{pending?.name}</strong> as{" "}
-              {pending?.position}? This action cannot be undone.
+              You are voting for{" "}
+              {openPositions
+                .map((p) => {
+                  const c = (candidates.data ?? []).find((x) => x.id === selections[p.id]);
+                  return `${c?.name ?? ""} (${p.title})`;
+                })
+                .join(", ")}
+              . This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
             <AlertDialogAction
