@@ -2,10 +2,13 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function assertAdmin(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
+  // Reads the caller's own role row under RLS ("own roles readable").
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
   if (error) throw new Error("Could not verify admin access");
   if (!data) throw new Error("Admin access required");
   return true;
