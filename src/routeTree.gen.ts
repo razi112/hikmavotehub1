@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CandidatesRouteImport } from './routes/candidates'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as VoteRouteImport } from './routes/vote'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
@@ -35,6 +36,11 @@ const CandidatesRoute = CandidatesRouteImport.update({
   path: '/candidates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VoteRoute = VoteRouteImport.update({
   id: '/vote',
   path: '/vote',
@@ -50,6 +56,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/candidates': typeof CandidatesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
 }
@@ -57,6 +64,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/candidates': typeof CandidatesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
 }
@@ -66,20 +74,22 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/candidates': typeof CandidatesRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/candidates' | '/vote' | '/admin'
+  fullPaths: '/' | '/auth' | '/candidates' | '/sitemap.xml' | '/vote' | '/admin'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/candidates' | '/vote' | '/admin'
+  to: '/' | '/auth' | '/candidates' | '/sitemap.xml' | '/vote' | '/admin'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/candidates'
+    | '/sitemap.xml'
     | '/vote'
     | '/_authenticated/admin'
   fileRoutesById: FileRoutesById
@@ -89,6 +99,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   CandidatesRoute: typeof CandidatesRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VoteRoute: typeof VoteRoute
 }
 
@@ -120,6 +131,13 @@ declare module '@tanstack/react-router' {
       path: '/candidates'
       fullPath: '/candidates'
       preLoaderRoute: typeof CandidatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vote': {
@@ -155,6 +173,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   CandidatesRoute: CandidatesRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VoteRoute: VoteRoute,
 }
 export const routeTree = rootRouteImport
