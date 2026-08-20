@@ -158,9 +158,10 @@ function AdminPage() {
               variant="ghost"
               size="sm"
               onClick={async () => {
-                await supabase.auth.signOut();
+                await adminLock();
                 navigate({ to: "/auth" });
               }}
+
             >
               <LogOut className="h-4 w-4" /> Sign out
             </Button>
