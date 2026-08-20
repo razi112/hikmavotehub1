@@ -1,13 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { adminStatus, adminUnlock } from "@/lib/admin-gate.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -15,7 +12,7 @@ export const Route = createFileRoute("/auth")({
       { title: "Admin sign in — Hikma Vote" },
       {
         name: "description",
-        content: "Election committee sign in for managing candidates, students and live analytics.",
+        content: "Election committee PIN sign in for managing candidates, students and live analytics.",
       },
       { property: "og:title", content: "Admin sign in — Hikma Vote" },
       { property: "og:description", content: "Restricted access for the election committee." },
@@ -24,54 +21,62 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const LENGTH = 4;
+
 function AuthPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [digits, setDigits] = useState<string[]>(Array(LENGTH).fill(""));
   const [busy, setBusy] = useState(false);
+  const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/admin" });
+    adminStatus().then(({ unlocked }) => {
+      if (unlocked) navigate({ to: "/admin" });
     });
   }, [navigate]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(pin: string) {
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Account created. You can sign in now.");
-        setMode("signin");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/admin" });
+      const { ok } = await adminUnlock({ data: { pin } });
+      if (!ok) {
+        toast.error("Incorrect PIN");
+        setDigits(Array(LENGTH).fill(""));
+        inputs.current[0]?.focus();
+        return;
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      navigate({ to: "/admin" });
+    } catch {
+      toast.error("Sign in failed. Try again.");
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Google sign-in failed");
+  function setDigit(index: number, value: string) {
+    const clean = value.replace(/\D/g, "");
+    if (!clean) {
+      const next = [...digits];
+      next[index] = "";
+      setDigits(next);
       return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/admin" });
+    const next = [...digits];
+    let cursor = index;
+    for (const ch of clean) {
+      if (cursor >= LENGTH) break;
+      next[cursor] = ch;
+      cursor += 1;
+    }
+    setDigits(next);
+    inputs.current[Math.min(cursor, LENGTH - 1)]?.focus();
+    if (next.every((d) => d !== "")) void submit(next.join(""));
+  }
+
+  function onKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputs.current[index - 1]?.focus();
+    }
   }
 
   return (
@@ -83,59 +88,50 @@ function AuthPage() {
             <span className="grid h-11 w-11 place-items-center rounded-2xl gradient-primary text-primary-foreground">
               <LockKeyhole className="h-5 w-5" />
             </span>
-            <h1 className="mt-4 font-display text-2xl font-bold">
-              {mode === "signin" ? "Committee sign in" : "Create committee account"}
-            </h1>
+            <h1 className="mt-4 font-display text-2xl font-bold">Committee sign in</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Admin access only. Students vote by selecting their name.
+              Enter the 4-digit admin PIN. Students vote by selecting their name.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-12 rounded-xl"
-                />
+            <form
+              className="mt-7"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const pin = digits.join("");
+                if (pin.length === LENGTH) void submit(pin);
+              }}
+            >
+              <div className="flex justify-center gap-3">
+                {digits.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => {
+                      inputs.current[index] = el;
+                    }}
+                    value={digit}
+                    onChange={(e) => setDigit(index, e.target.value)}
+                    onKeyDown={(e) => onKeyDown(index, e)}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    type="password"
+                    maxLength={LENGTH}
+                    aria-label={`PIN digit ${index + 1}`}
+                    disabled={busy}
+                    className="h-16 w-14 rounded-2xl border border-border bg-background/70 text-center font-display text-2xl font-bold outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                  />
+                ))}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="h-12 rounded-xl"
-                />
-              </div>
-              <Button type="submit" variant="hero" size="xl" className="w-full" disabled={busy}>
-                {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}
+
+              <Button
+                type="submit"
+                variant="hero"
+                size="xl"
+                className="mt-7 w-full"
+                disabled={busy || digits.some((d) => !d)}
+              >
+                {busy ? "Checking…" : "Unlock dashboard"}
               </Button>
             </form>
-
-            <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-muted-foreground">
-              <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <Button variant="outline" size="xl" className="w-full" onClick={handleGoogle}>
-              Continue with Google
-            </Button>
-
-            <button
-              type="button"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="mt-5 w-full text-sm text-muted-foreground transition-colors hover:text-primary"
-            >
-              {mode === "signin"
-                ? "Need an account? Sign up"
-                : "Already have an account? Sign in"}
-            </button>
           </div>
         </div>
       </main>

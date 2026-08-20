@@ -1,14 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const getAdminOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { assertAdmin, adminOverview } = await import("./admin.server");
-    await assertAdmin(context.supabase, context.userId);
-    return adminOverview();
-  });
+export const getAdminOverview = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAdminSession } = await import("./admin-session.server");
+  const { adminOverview } = await import("./admin.server");
+  await requireAdminSession();
+  return adminOverview();
+});
 
 const candidateSchema = z.object({
   id: z.string().uuid().optional(),
@@ -21,25 +19,24 @@ const candidateSchema = z.object({
 });
 
 export const saveCandidate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => candidateSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const { assertAdmin, upsertCandidateRow } = await import("./admin.server");
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    const { requireAdminSession } = await import("./admin-session.server");
+    const { upsertCandidateRow } = await import("./admin.server");
+    await requireAdminSession();
     return upsertCandidateRow(data);
   });
 
 export const removeCandidate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { assertAdmin, deleteCandidateRow } = await import("./admin.server");
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    const { requireAdminSession } = await import("./admin-session.server");
+    const { deleteCandidateRow } = await import("./admin.server");
+    await requireAdminSession();
     return deleteCandidateRow(data.id);
   });
 
 export const saveSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
       .object({
@@ -50,17 +47,18 @@ export const saveSettings = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
-    const { assertAdmin, updateSettingsRow } = await import("./admin.server");
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    const { requireAdminSession } = await import("./admin-session.server");
+    const { updateSettingsRow } = await import("./admin.server");
+    await requireAdminSession();
     return updateSettingsRow(data);
   });
 
 export const toggleStudentBlock = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), blocked: z.boolean() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { assertAdmin, setStudentBlocked } = await import("./admin.server");
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    const { requireAdminSession } = await import("./admin-session.server");
+    const { setStudentBlocked } = await import("./admin.server");
+    await requireAdminSession();
     return setStudentBlocked(data.id, data.blocked);
   });
