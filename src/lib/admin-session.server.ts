@@ -8,7 +8,7 @@ function sessionConfig() {
     password: process.env["ADMIN_SESSION_SECRET"]!,
     name: "hikma-admin",
     maxAge: 60 * 60 * 8,
-    cookie: { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" },
+    cookie: { httpOnly: true, secure: true, sameSite: "none" as const, path: "/" },
   };
 }
 
