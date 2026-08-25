@@ -53,15 +53,14 @@ function AuthPage() {
     }
   }
 
-  function setDigit(index: number, value: string) {
-    const clean = value.replace(/\D/g, "");
+  function applyDigits(index: number, raw: string) {
+    const clean = raw.replace(/\D/g, "");
+    const next = [...digits];
     if (!clean) {
-      const next = [...digits];
       next[index] = "";
       setDigits(next);
       return;
     }
-    const next = [...digits];
     let cursor = index;
     for (const ch of clean) {
       if (cursor >= LENGTH) break;
@@ -69,8 +68,17 @@ function AuthPage() {
       cursor += 1;
     }
     setDigits(next);
+    // keep the DOM in sync: each box always shows exactly one digit
+    inputs.current.forEach((el, i) => {
+      if (el) el.value = next[i] ?? "";
+    });
     inputs.current[Math.min(cursor, LENGTH - 1)]?.focus();
     if (next.every((d) => d !== "")) void submit(next.join(""));
+  }
+
+  function setDigit(index: number, value: string) {
+    // a single box only ever holds one character; extra chars spill forward
+    applyDigits(index, value.slice(-LENGTH));
   }
 
   function onKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
