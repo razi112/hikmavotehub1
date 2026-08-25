@@ -16,9 +16,7 @@ export const studentRefresh = createServerFn({ method: "POST" })
   });
 
 export const castVote = createServerFn({ method: "POST" })
-  .inputValidator((d) =>
-    z.object({ studentId: z.string().uuid(), candidateId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d) => z.object({ candidateId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const { submitVote } = await import("./election.server");
     return submitVote(data);

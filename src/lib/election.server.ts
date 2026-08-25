@@ -64,9 +64,8 @@ export async function refreshStudent(studentId: string): Promise<StudentSessionD
 }
 
 export async function submitVote(input: {
-  studentId: string;
   candidateId: string;
-}): Promise<{ votedPositionIds: string[] }> {
+}): Promise<{ ok: true }> {
   const { data: settings } = await supabaseAdmin
     .from("settings")
     .select("election_status, start_time, end_time")
@@ -80,13 +79,6 @@ export async function submitVote(input: {
   if (new Date(settings.start_time).getTime() > now) throw new Error("Voting has not started yet.");
   if (new Date(settings.end_time).getTime() < now) throw new Error("Voting has ended.");
 
-  const { data: student } = await supabaseAdmin
-    .from("students")
-    .select("id, is_blocked")
-    .eq("id", input.studentId)
-    .maybeSingle();
-  if (!student || student.is_blocked) throw new Error("You are not eligible to vote.");
-
   const { data: candidate } = await supabaseAdmin
     .from("candidates")
     .select("id, position_id, is_active")
@@ -95,17 +87,16 @@ export async function submitVote(input: {
   if (!candidate || !candidate.is_active) throw new Error("This candidate is no longer available.");
 
   const { error } = await supabaseAdmin.from("votes").insert({
-    student_id: student.id,
+    student_id: null,
     candidate_id: candidate.id,
     position_id: candidate.position_id,
   });
 
   if (error) {
-    if (error.code === "23505") throw new Error("You have already voted for this position.");
     throw new Error("Your vote could not be recorded. Please try again.");
   }
 
-  return { votedPositionIds: await votedPositions(student.id) };
+  return { ok: true };
 }
 
 export async function buildTally(): Promise<Tally> {
@@ -125,7 +116,7 @@ export async function buildTally(): Promise<Tally> {
   for (const v of votes) {
     perCandidate[v.candidate_id] = (perCandidate[v.candidate_id] ?? 0) + 1;
     perPosition[v.position_id] = (perPosition[v.position_id] ?? 0) + 1;
-    voters.add(v.student_id);
+    if (v.student_id) voters.add(v.student_id);
     const hour = `${String(new Date(v.created_at).getHours()).padStart(2, "0")}:00`;
     hourMap.set(hour, (hourMap.get(hour) ?? 0) + 1);
   }

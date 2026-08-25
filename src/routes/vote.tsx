@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, LogOut, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Confetti } from "@/components/confetti";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -20,9 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { castVote, getVoters, studentLoginById, studentRefresh } from "@/lib/election.functions";
+import { castVote } from "@/lib/election.functions";
 import { candidatesQuery, positionsQuery, settingsQuery } from "@/lib/queries";
-import { useStudentSession } from "@/lib/student-session";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/vote")({
@@ -32,12 +30,13 @@ export const Route = createFileRoute("/vote")({
       {
         name: "description",
         content:
-          "Select your name from the voter list and cast one secure vote for each executive committee position.",
+          "Cast your vote for President, Secretary and Treasurer in the Hikma Class Union Committee election.",
       },
       { property: "og:title", content: "Cast your vote — Hikma Vote" },
       {
         property: "og:description",
-        content: "Three simple steps: choose a position, select a candidate, confirm.",
+        content:
+          "Select one candidate for each position and submit your ballot.",
       },
     ],
   }),
@@ -45,105 +44,37 @@ export const Route = createFileRoute("/vote")({
 });
 
 function VotePage() {
-  const { session, ready, save } = useStudentSession();
   const settings = useQuery(settingsQuery());
   const positions = useQuery(positionsQuery());
   const candidates = useQuery(candidatesQuery());
-
-  const login = useServerFn(studentLoginById);
-  const loadVoters = useServerFn(getVoters);
-  const voters = useQuery({ queryKey: ["voters"], queryFn: () => loadVoters({}) });
-  const refresh = useServerFn(studentRefresh);
   const vote = useServerFn(castVote);
 
-  const [voterSearch, setVoterSearch] = useState("");
-  const [selectedVoter, setSelectedVoter] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
 
-  useEffect(() => {
-    if (!session) return;
-    refresh({ data: { studentId: session.studentId } })
-      .then((fresh) => save(fresh))
-      .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.studentId]);
-
-
-  const filteredVoters = useMemo(() => {
-    const list = voters.data ?? [];
-    const q = voterSearch.trim().toLowerCase();
-    return q
-      ? list.filter(
-          (v) =>
-            v.name.toLowerCase().includes(q) ||
-            (v.positionTitle ?? "").toLowerCase().includes(q),
-        )
-      : list;
-  }, [voters.data, voterSearch]);
-
-  const voterSections = useMemo(() => {
-    const order = (positions.data ?? []).map((p) => p.title);
-    const groups = new Map<string, typeof filteredVoters>();
-    for (const v of filteredVoters) {
-      const key = v.positionTitle ?? "Other";
-      const arr = groups.get(key) ?? [];
-      arr.push(v);
-      groups.set(key, arr);
-    }
-    return Array.from(groups.entries()).sort((a, b) => {
-      const ai = order.indexOf(a[0]);
-      const bi = order.indexOf(b[0]);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    });
-  }, [filteredVoters, positions.data]);
-
-
-  const voted = useMemo(() => new Set(session?.votedPositionIds ?? []), [session]);
   const closed = settings.data ? settings.data.election_status !== "open" : false;
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      if (!selectedVoter) return;
-      const result = await login({ data: { studentId: selectedVoter } });
-      save(result);
-      toast.success(`Welcome, ${result.name}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   function hasCandidates(positionId: string) {
     return (candidates.data ?? []).some((c) => c.position_id === positionId && c.is_active);
   }
 
-  const openPositions = useMemo(
-    () => (positions.data ?? []).filter((p) => !voted.has(p.id) && hasCandidates(p.id)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [positions.data, candidates.data, voted],
+  const votingPositions = useMemo(
+    () => (positions.data ?? []).filter((p) => hasCandidates(p.id)),
+    [positions.data, candidates.data],
   );
 
   const allSelected =
-    openPositions.length > 0 && openPositions.every((p) => !!selections[p.id]);
+    votingPositions.length > 0 && votingPositions.every((p) => !!selections[p.id]);
 
   async function confirmVote() {
-    if (!session || !allSelected) return;
+    if (!allSelected) return;
     setBusy(true);
     try {
-      let votedIds = session.votedPositionIds;
-      for (const p of openPositions) {
-        const result = await vote({
-          data: { studentId: session.studentId, candidateId: selections[p.id] },
-        });
-        votedIds = result.votedPositionIds;
+      for (const p of votingPositions) {
+        await vote({ data: { candidateId: selections[p.id] } });
       }
-      save({ ...session, votedPositionIds: votedIds });
       setSelections({});
       setConfirmOpen(false);
       setCelebrate(true);
@@ -156,10 +87,6 @@ function VotePage() {
     }
   }
 
-  const allDone =
-    !!positions.data?.length && positions.data.every((p) => voted.has(p.id) || !hasCandidates(p.id));
-
-
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -170,185 +97,74 @@ function VotePage() {
           <header className="animate-rise max-w-2xl">
             <h1 className="font-display text-3xl font-bold sm:text-4xl">Cast your vote</h1>
             <p className="mt-3 text-muted-foreground">
-              One vote per position. Your choice is final once confirmed.
+              One vote per position. Select one candidate for every position to submit.
             </p>
           </header>
 
-          {!ready && <Skeleton className="mt-8 h-64 rounded-3xl" />}
-
-          {ready && !session && (
-            <form
-              onSubmit={handleLogin}
-              className="glass animate-rise mt-8 max-w-md rounded-3xl p-6 shadow-soft sm:p-8"
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-2xl gradient-primary text-primary-foreground">
-                <ShieldCheck className="h-5 w-5" />
-              </span>
-              <h2 className="mt-4 font-display text-xl font-semibold">Student sign in</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Find and select your name from the voter list.
-              </p>
-              <div className="mt-5 space-y-3">
-                <Input
-                  value={voterSearch}
-                  onChange={(e) => setVoterSearch(e.target.value)}
-                  placeholder="Search your name…"
-                  autoComplete="off"
-                  className="h-12 rounded-xl text-base"
-                />
-                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border border-border/60 p-2">
-                  {voters.isLoading && <Skeleton className="h-12 rounded-xl" />}
-                  {!voters.isLoading && filteredVoters.length === 0 && (
-                    <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                      No matching voter found.
-                    </p>
-                  )}
-                  {voterSections.map(([title, list]) => (
-                    <div key={title} className="pt-1">
-                      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {title}
-                      </p>
-                      <div className="space-y-1.5">
-                        {list.map((v) => (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => setSelectedVoter(v.id)}
-                            className={cn(
-                              "flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm transition-all duration-200",
-                              v.id === selectedVoter
-                                ? "gradient-primary text-primary-foreground shadow-soft"
-                                : "hover:bg-muted/60",
-                            )}
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium">{v.name}</span>
-                              {v.className && (
-                                <span className="block truncate text-xs opacity-70">
-                                  {v.className}
-                                </span>
-                              )}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-
-
-
-                </div>
-              </div>
-              <Button
-                type="submit"
-                variant="hero"
-                size="xl"
-                className="mt-5 w-full"
-                disabled={busy || !selectedVoter}
-              >
-                {busy ? "Checking…" : "Continue"}
-              </Button>
-            </form>
-          )}
-
-          {ready && session && (
+          {positions.isLoading || candidates.isLoading || settings.isLoading ? (
+            <Skeleton className="mt-8 h-64 rounded-3xl" />
+          ) : (
             <>
-              <div className="glass mt-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-3xl px-5 py-4">
-                <div className="min-w-0">
-                  <p className="truncate font-display font-semibold">{session.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {session.className ? `${session.className} · ` : ""}
-                    {voted.size} of {positions.data?.length ?? 0} positions voted
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => save(null)}>
-                  <LogOut className="h-4 w-4" /> Sign out
-                </Button>
-              </div>
-
               {closed && (
-                <div className="glass mt-4 rounded-2xl border-destructive/30 px-5 py-4 text-sm text-destructive">
+                <div className="glass mt-8 rounded-2xl border-destructive/30 px-5 py-4 text-sm text-destructive">
                   Voting is currently closed by the election committee.
                 </div>
               )}
 
-              {allDone && (
-                <div className="glass animate-pop mt-6 rounded-3xl px-6 py-10 text-center">
-                  <CheckCircle2 className="mx-auto h-14 w-14 text-primary" />
-                  <h2 className="mt-4 font-display text-2xl font-bold">Thank you for voting!</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    You have completed every available position.
-                  </p>
-                </div>
-              )}
-
               <section className="mt-8 space-y-6">
-                {(positions.data ?? []).map((p) => {
+                {votingPositions.length === 0 && (
+                  <p className="text-muted-foreground">
+                    No candidates have been announced yet. Please check back later.
+                  </p>
+                )}
+
+                {votingPositions.map((p) => {
                   const list = (candidates.data ?? []).filter(
                     (c) => c.position_id === p.id && c.is_active,
                   );
                   return (
                     <div key={p.id} className="glass rounded-3xl p-5">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="font-display text-lg font-semibold">{p.title}</h2>
-                        {voted.has(p.id) && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Voted
-                          </span>
-                        )}
-                      </div>
+                      <h2 className="font-display text-lg font-semibold">{p.title}</h2>
 
-                      {voted.has(p.id) ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          Your vote for {p.title} is locked in and cannot be changed.
-                        </p>
-                      ) : list.length === 0 ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          No candidates have been announced for this position yet.
-                        </p>
-                      ) : (
-                        <div className="mt-4 space-y-2">
-                          {list.map((c) => {
-                            const active = selections[p.id] === c.id;
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                disabled={closed}
-                                onClick={() => setSelections((s) => ({ ...s, [p.id]: c.id }))}
-                                className={cn(
-                                  "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
-                                  active
-                                    ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
-                                    : "border-border/60 hover:bg-muted/60",
+                      <div className="mt-4 space-y-2">
+                        {list.map((c) => {
+                          const active = selections[p.id] === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              disabled={closed}
+                              onClick={() => setSelections((s) => ({ ...s, [p.id]: c.id }))}
+                              className={cn(
+                                "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
+                                active
+                                  ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
+                                  : "border-border/60 hover:bg-muted/60",
+                              )}
+                            >
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium">{c.name}</span>
+                                {c.class && (
+                                  <span className="block truncate text-xs opacity-70">
+                                    {c.class}
+                                  </span>
                                 )}
-                              >
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate font-medium">{c.name}</span>
-                                  {c.class && (
-                                    <span className="block truncate text-xs opacity-70">
-                                      {c.class}
-                                    </span>
-                                  )}
-                                </span>
-                                {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                              </span>
+                              {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
               </section>
 
-
-              {!allDone && openPositions.length > 0 && (
+              {votingPositions.length > 0 && (
                 <div className="glass sticky bottom-4 mt-8 flex flex-col gap-3 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    {Object.keys(selections).filter((k) => openPositions.some((p) => p.id === k))
-                      .length}{" "}
-                    of {openPositions.length} positions selected. Select one candidate for every
+                    {votingPositions.filter((p) => selections[p.id]).length} of{" "}
+                    {votingPositions.length} positions selected. Select one candidate for every
                     position to submit.
                   </p>
                   <Button
@@ -372,7 +188,7 @@ function VotePage() {
             <AlertDialogTitle className="font-display">Confirm your votes</AlertDialogTitle>
             <AlertDialogDescription>
               You are voting for{" "}
-              {openPositions
+              {votingPositions
                 .map((p) => {
                   const c = (candidates.data ?? []).find((x) => x.id === selections[p.id]);
                   return `${c?.name ?? ""} (${p.title})`;
