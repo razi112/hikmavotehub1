@@ -222,7 +222,7 @@ function VotePage() {
             <AlertDialogTitle className="font-display">Confirm your votes</AlertDialogTitle>
             <AlertDialogDescription>
               You are voting for{" "}
-              {votingPositions
+              {openPositions
                 .map((p) => {
                   const c = (candidates.data ?? []).find((x) => x.id === selections[p.id]);
                   return `${c?.name ?? ""} (${p.title})`;
