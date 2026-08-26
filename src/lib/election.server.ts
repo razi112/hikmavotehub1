@@ -63,6 +63,16 @@ export async function refreshStudent(studentId: string): Promise<StudentSessionD
   };
 }
 
+export async function votedPositionsForBallot(): Promise<string[]> {
+  const { getBallotToken } = await import("./ballot-session.server");
+  const token = await getBallotToken();
+  const { data } = await supabaseAdmin
+    .from("votes")
+    .select("position_id")
+    .eq("voter_token", token);
+  return (data ?? []).map((v) => v.position_id);
+}
+
 export async function submitVote(input: {
   candidateId: string;
 }): Promise<{ ok: true }> {
@@ -86,18 +96,33 @@ export async function submitVote(input: {
     .maybeSingle();
   if (!candidate || !candidate.is_active) throw new Error("This candidate is no longer available.");
 
+  const { getBallotToken } = await import("./ballot-session.server");
+  const token = await getBallotToken();
+
+  // Server-side guard: one vote per position for this ballot.
+  const { count } = await supabaseAdmin
+    .from("votes")
+    .select("id", { count: "exact", head: true })
+    .eq("voter_token", token)
+    .eq("position_id", candidate.position_id);
+  if ((count ?? 0) > 0) throw new Error("You have already voted for this position.");
+
   const { error } = await supabaseAdmin.from("votes").insert({
     student_id: null,
     candidate_id: candidate.id,
     position_id: candidate.position_id,
+    voter_token: token,
   });
 
   if (error) {
+    // Unique index catches races between concurrent submissions.
+    if (error.code === "23505") throw new Error("You have already voted for this position.");
     throw new Error("Your vote could not be recorded. Please try again.");
   }
 
   return { ok: true };
 }
+
 
 export async function buildTally(): Promise<Tally> {
   const [votesRes, studentsRes, candidatesRes, settingsRes] = await Promise.all([
