@@ -22,6 +22,11 @@ export const castVote = createServerFn({ method: "POST" })
     return submitVote(data);
   });
 
+export const getMyVotedPositions = createServerFn({ method: "GET" }).handler(async () => {
+  const { votedPositionsForBallot } = await import("./election.server");
+  return votedPositionsForBallot();
+});
+
 export const getTally = createServerFn({ method: "GET" }).handler(async () => {
   const { buildTally } = await import("./election.server");
   return buildTally();
