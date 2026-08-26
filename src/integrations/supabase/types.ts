@@ -164,6 +164,7 @@ export type Database = {
           id: string
           position_id: string
           student_id: string | null
+          voter_token: string | null
         }
         Insert: {
           candidate_id: string
@@ -171,6 +172,7 @@ export type Database = {
           id?: string
           position_id: string
           student_id?: string | null
+          voter_token?: string | null
         }
         Update: {
           candidate_id?: string
@@ -178,6 +180,7 @@ export type Database = {
           id?: string
           position_id?: string
           student_id?: string | null
+          voter_token?: string | null
         }
         Relationships: [
           {
