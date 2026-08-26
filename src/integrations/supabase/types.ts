@@ -163,21 +163,21 @@ export type Database = {
           created_at: string
           id: string
           position_id: string
-          student_id: string
+          student_id: string | null
         }
         Insert: {
           candidate_id: string
           created_at?: string
           id?: string
           position_id: string
-          student_id: string
+          student_id?: string | null
         }
         Update: {
           candidate_id?: string
           created_at?: string
           id?: string
           position_id?: string
-          student_id?: string
+          student_id?: string | null
         }
         Relationships: [
           {
