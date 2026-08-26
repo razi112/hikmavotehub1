@@ -135,50 +135,64 @@ function VotePage() {
                   const list = (candidates.data ?? []).filter(
                     (c) => c.position_id === p.id && c.is_active,
                   );
+                  const done = votedIds.has(p.id);
                   return (
                     <div key={p.id} className="glass rounded-3xl p-5">
-                      <h2 className="font-display text-lg font-semibold">{p.title}</h2>
-
-                      <div className="mt-4 space-y-2">
-                        {list.map((c) => {
-                          const active = selections[p.id] === c.id;
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              disabled={closed}
-                              onClick={() => setSelections((s) => ({ ...s, [p.id]: c.id }))}
-                              className={cn(
-                                "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
-                                active
-                                  ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
-                                  : "border-border/60 hover:bg-muted/60",
-                              )}
-                            >
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium">{c.name}</span>
-                                {c.class && (
-                                  <span className="block truncate text-xs opacity-70">
-                                    {c.class}
-                                  </span>
-                                )}
-                              </span>
-                              {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="font-display text-lg font-semibold">{p.title}</h2>
+                        {done && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Voted
+                          </span>
+                        )}
                       </div>
+
+                      {done ? (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          Your vote for this position is locked in.
+                        </p>
+                      ) : (
+                        <div className="mt-4 space-y-2">
+                          {list.map((c) => {
+                            const active = selections[p.id] === c.id;
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={closed}
+                                onClick={() => setSelections((s) => ({ ...s, [p.id]: c.id }))}
+                                className={cn(
+                                  "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
+                                  active
+                                    ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
+                                    : "border-border/60 hover:bg-muted/60",
+                                )}
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-medium">{c.name}</span>
+                                  {c.class && (
+                                    <span className="block truncate text-xs opacity-70">
+                                      {c.class}
+                                    </span>
+                                  )}
+                                </span>
+                                {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </section>
 
-              {votingPositions.length > 0 && (
+              {openPositions.length > 0 ? (
                 <div className="glass sticky bottom-4 mt-8 flex flex-col gap-3 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-muted-foreground">
-                    {votingPositions.filter((p) => selections[p.id]).length} of{" "}
-                    {votingPositions.length} positions selected. Select one candidate for every
-                    position to submit.
+                    {openPositions.filter((p) => selections[p.id]).length} of{" "}
+                    {openPositions.length} positions selected. Select one candidate for every
+                    remaining position to submit.
                   </p>
                   <Button
                     variant="hero"
@@ -189,7 +203,14 @@ function VotePage() {
                     Submit votes
                   </Button>
                 </div>
+              ) : (
+                votingPositions.length > 0 && (
+                  <div className="glass mt-8 rounded-3xl p-5 text-sm text-muted-foreground">
+                    You have already voted for every position. Thank you!
+                  </div>
+                )
               )}
+
             </>
           )}
         </div>
