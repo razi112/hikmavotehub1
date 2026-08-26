@@ -48,6 +48,11 @@ function VotePage() {
   const positions = useQuery(positionsQuery());
   const candidates = useQuery(candidatesQuery());
   const vote = useServerFn(castVote);
+  const fetchVoted = useServerFn(getMyVotedPositions);
+  const voted = useQuery({
+    queryKey: ["my-voted-positions"],
+    queryFn: () => fetchVoted({}),
+  });
 
   const [busy, setBusy] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>({});
@@ -55,6 +60,7 @@ function VotePage() {
   const [celebrate, setCelebrate] = useState(false);
 
   const closed = settings.data ? settings.data.election_status !== "open" : false;
+  const votedIds = useMemo(() => new Set(voted.data ?? []), [voted.data]);
 
   function hasCandidates(positionId: string) {
     return (candidates.data ?? []).some((c) => c.position_id === positionId && c.is_active);
@@ -65,14 +71,19 @@ function VotePage() {
     [positions.data, candidates.data],
   );
 
+  const openPositions = useMemo(
+    () => votingPositions.filter((p) => !votedIds.has(p.id)),
+    [votingPositions, votedIds],
+  );
+
   const allSelected =
-    votingPositions.length > 0 && votingPositions.every((p) => !!selections[p.id]);
+    openPositions.length > 0 && openPositions.every((p) => !!selections[p.id]);
 
   async function confirmVote() {
     if (!allSelected) return;
     setBusy(true);
     try {
-      for (const p of votingPositions) {
+      for (const p of openPositions) {
         await vote({ data: { candidateId: selections[p.id] } });
       }
       setSelections({});
@@ -84,8 +95,10 @@ function VotePage() {
       toast.error(err instanceof Error ? err.message : "Vote failed");
     } finally {
       setBusy(false);
+      void voted.refetch();
     }
   }
+
 
   return (
     <div className="min-h-screen">
