@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { castVote } from "@/lib/election.functions";
+import { castVote, getMyVotedPositions } from "@/lib/election.functions";
 import { candidatesQuery, positionsQuery, settingsQuery } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
