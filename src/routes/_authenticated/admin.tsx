@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { BarChart3, LogOut, Plus, Trash2, Users } from "lucide-react";
+import { Activity, BarChart3, LogOut, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { adminLock } from "@/lib/admin-gate.functions";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -75,7 +75,8 @@ function AdminPage() {
   const overview = useQuery({
     queryKey: ["admin-overview"],
     queryFn: () => overviewFn({}),
-    refetchInterval: 15000,
+    refetchInterval: (query) =>
+      query.state.data?.settings?.election_status === "open" ? 3000 : false,
   });
 
   const [form, setForm] = useState<CandidateForm>(emptyForm());
@@ -153,6 +154,12 @@ function AdminPage() {
                 Election is{" "}
                 <strong className="text-foreground">{settings?.election_status ?? "—"}</strong>
               </p>
+              {settings?.election_status === "open" && (
+                <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+                  <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+                  Live vote counts
+                </p>
+              )}
             </div>
             <Button
               variant="ghost"
