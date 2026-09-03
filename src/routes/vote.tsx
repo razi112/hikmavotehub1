@@ -353,12 +353,14 @@ function PositionCard({
 
 function SubmitBar({
   openPositions,
+  selections,
   allSelected,
   closed,
   busy,
   onSubmit,
 }: {
   openPositions: Position[];
+  selections: Record<string, string>;
   allSelected: boolean;
   closed: boolean;
   busy: boolean;
@@ -373,7 +375,7 @@ function SubmitBar({
     );
   }
 
-  const selectedCount = openPositions.filter((p) => p.id in {}).length;
+  const selectedCount = openPositions.filter((p) => selections[p.id]).length;
   const remaining = openPositions.length - selectedCount;
 
   return (
@@ -400,8 +402,4 @@ function SubmitBar({
       </Button>
     </div>
   );
-}
-
-function selectedCountFromProps(openPositions: Position[], selections: Record<string, string>) {
-  return openPositions.filter((p) => selections[p.id]).length;
 }
