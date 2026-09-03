@@ -183,3 +183,224 @@ function VotePage() {
     </div>
   );
 }
+
+type Candidate = {
+  id: string;
+  name: string;
+  class?: string | null;
+  position_id: string;
+  is_active: boolean;
+};
+
+type Position = {
+  id: string;
+  title: string;
+};
+
+function BallotPositions({
+  positions,
+  candidates,
+  votedIds,
+  selections,
+  closed,
+  onSelect,
+}: {
+  positions: Position[];
+  candidates: Candidate[];
+  votedIds: Set<string>;
+  selections: Record<string, string>;
+  closed: boolean;
+  onSelect: (positionId: string, candidateId: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  if (positions.length === 0) {
+    return (
+      <p className="mt-8 text-muted-foreground">
+        No candidates have been announced yet. Please check back later.
+      </p>
+    );
+  }
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const container = e.currentTarget;
+    const left = container.scrollLeft;
+    const width = container.offsetWidth;
+    const index = Math.round(left / (width * 0.85)) || 0;
+    setActiveIndex(Math.min(index, positions.length - 1));
+  }
+
+  return (
+    <section className="mt-8">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-6 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0"
+      >
+        {positions.map((p) => {
+          const list = candidates.filter((c) => c.position_id === p.id && c.is_active);
+          const done = votedIds.has(p.id);
+          return (
+            <PositionCard
+              key={p.id}
+              position={p}
+              candidates={list}
+              done={done}
+              selectedId={selections[p.id]}
+              closed={closed}
+              onSelect={onSelect}
+            />
+          );
+        })}
+      </div>
+
+      {/* Mobile pagination dots */}
+      <div className="flex justify-center gap-2 md:hidden">
+        {positions.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            aria-label={`Go to ${p.title}`}
+            onClick={() => {
+              const container = scrollRef.current;
+              if (!container) return;
+              const cardWidth = container.offsetWidth * 0.85 + 16;
+              container.scrollTo({ left: cardWidth * i, behavior: "smooth" });
+            }}
+            className={cn(
+              "h-2 rounded-full transition-all duration-200",
+              i === activeIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30",
+            )}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PositionCard({
+  position,
+  candidates,
+  done,
+  selectedId,
+  closed,
+  onSelect,
+}: {
+  position: Position;
+  candidates: Candidate[];
+  done: boolean;
+  selectedId?: string;
+  closed: boolean;
+  onSelect: (positionId: string, candidateId: string) => void;
+}) {
+  return (
+    <div className="glass min-w-[85vw] snap-center rounded-3xl p-4 sm:min-w-[78vw] md:min-w-0 md:p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
+        <h2 className="font-display text-lg font-semibold">{position.title}</h2>
+        {done ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <Lock className="h-3.5 w-3.5" /> Locked
+          </span>
+        ) : selectedId ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Selected
+          </span>
+        ) : null}
+      </div>
+
+      {done ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <p className="mt-4 text-sm font-medium">Vote locked</p>
+          <p className="text-xs text-muted-foreground">Your vote for {position.title} is secure.</p>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {candidates.map((c) => {
+            const active = selectedId === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                disabled={closed}
+                onClick={() => onSelect(position.id, c.id)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 disabled:opacity-60",
+                  active
+                    ? "border-transparent gradient-primary text-primary-foreground shadow-soft"
+                    : "border-border/60 hover:bg-muted/60",
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  {c.class && (
+                    <span className="block truncate text-xs opacity-70">{c.class}</span>
+                  )}
+                </span>
+                {active && <CheckCircle2 className="h-5 w-5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubmitBar({
+  openPositions,
+  allSelected,
+  closed,
+  busy,
+  onSubmit,
+}: {
+  openPositions: Position[];
+  allSelected: boolean;
+  closed: boolean;
+  busy: boolean;
+  onSubmit: () => void;
+}) {
+  if (openPositions.length === 0) {
+    return (
+      <div className="glass mt-8 flex items-center justify-center gap-3 rounded-3xl p-5 text-sm text-muted-foreground">
+        <CheckCircle2 className="h-5 w-5 text-primary" />
+        You have voted for every position. Thank you!
+      </div>
+    );
+  }
+
+  const selectedCount = openPositions.filter((p) => p.id in {}).length;
+  const remaining = openPositions.length - selectedCount;
+
+  return (
+    <div className="glass fixed inset-x-0 bottom-0 z-40 flex flex-col gap-3 border-t border-border/50 p-4 sm:static sm:mt-8 sm:rounded-3xl sm:border-0 sm:p-5">
+      <div className="flex items-center justify-between gap-3 sm:justify-start">
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <Vote className="h-4 w-4 text-primary" />
+          {selectedCount} / {openPositions.length} selected
+        </span>
+        <span className="text-xs text-muted-foreground sm:ml-auto">
+          {remaining === 0
+            ? "Ready to submit"
+            : `${remaining} position${remaining === 1 ? "" : "s"} left`}
+        </span>
+      </div>
+      <Button
+        variant="hero"
+        size="lg"
+        disabled={!allSelected || closed || busy}
+        onClick={onSubmit}
+        className="w-full sm:w-auto"
+      >
+        {busy ? "Submitting…" : "Submit votes"}
+      </Button>
+    </div>
+  );
+}
+
+function selectedCountFromProps(openPositions: Position[], selections: Record<string, string>) {
+  return openPositions.filter((p) => selections[p.id]).length;
+}
