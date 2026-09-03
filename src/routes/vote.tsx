@@ -137,6 +137,7 @@ function VotePage() {
 
               <SubmitBar
                 openPositions={openPositions}
+                selections={selections}
                 allSelected={allSelected}
                 closed={closed}
                 busy={busy}
