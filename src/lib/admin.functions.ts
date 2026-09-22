@@ -8,6 +8,13 @@ export const getAdminOverview = createServerFn({ method: "GET" }).handler(async 
   return adminOverview();
 });
 
+export const getGeneratedResults = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAdminSession } = await import("./admin-session.server");
+  const { generateResults } = await import("./admin.server");
+  await requireAdminSession();
+  return generateResults();
+});
+
 const candidateSchema = z.object({
   id: z.string().uuid().optional(),
   position_id: z.string().uuid(),
