@@ -32,6 +32,72 @@ export async function adminOverview() {
   };
 }
 
+export async function generateResults() {
+  const [positionsRes, candidatesRes, votesRes, studentsRes, settingsRes] = await Promise.all([
+    supabaseAdmin.from("positions").select("id, title, display_order").order("display_order"),
+    supabaseAdmin.from("candidates").select("id, name, class, image_url, position_id, is_active"),
+    supabaseAdmin.from("votes").select("candidate_id, position_id, student_id, voter_token"),
+    supabaseAdmin.from("students").select("id"),
+    supabaseAdmin.from("settings").select("*").eq("id", 1).maybeSingle(),
+  ]);
+
+  const positions = positionsRes.data ?? [];
+  const candidates = candidatesRes.data ?? [];
+  const votes = votesRes.data ?? [];
+  const students = studentsRes.data ?? [];
+
+  const voterIds = new Set(
+    votes.map((v) => v.student_id ?? v.voter_token ?? "").filter((v) => v !== ""),
+  );
+  const totalVoters = students.length;
+  const votedCount = voterIds.size;
+
+  const results = positions.map((p) => {
+    const list = candidates
+      .filter((c) => c.position_id === p.id)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        class: c.class,
+        image_url: c.image_url,
+        is_active: c.is_active,
+        votes: votes.filter((v) => v.candidate_id === c.id).length,
+      }))
+      .sort((a, b) => b.votes - a.votes);
+
+    const total = list.reduce((s, c) => s + c.votes, 0);
+    const top = list[0]?.votes ?? 0;
+    const leaders = list.filter((c) => c.votes === top && top > 0);
+
+    return {
+      positionId: p.id,
+      title: p.title,
+      totalVotes: total,
+      tie: leaders.length > 1,
+      winnerIds: leaders.map((c) => c.id),
+      candidates: list.map((c) => ({
+        ...c,
+        percentage: total ? Math.round((c.votes / total) * 1000) / 10 : 0,
+        isWinner: top > 0 && c.votes === top,
+      })),
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    electionStatus: settingsRes.data?.election_status ?? "open",
+    websiteName: settingsRes.data?.website_name ?? "Hikma Vote",
+    totals: {
+      totalVoters,
+      totalVotes: votes.length,
+      votedCount,
+      notVotedCount: Math.max(totalVoters - votedCount, 0),
+      turnout: totalVoters ? Math.round((votedCount / totalVoters) * 1000) / 10 : 0,
+    },
+    results,
+  };
+}
+
 export async function upsertCandidateRow(input: {
   id?: string;
   position_id: string;
