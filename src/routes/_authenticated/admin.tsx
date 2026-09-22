@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Activity, BarChart3, LogOut, Plus, Trash2, Users } from "lucide-react";
+import { Activity, BarChart3, LogOut, Plus, Trash2, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
 import { adminLock } from "@/lib/admin-gate.functions";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -161,17 +161,23 @@ function AdminPage() {
                 </p>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                await adminLock();
-                navigate({ to: "/auth" });
-              }}
-
-            >
-              <LogOut className="h-4 w-4" /> Sign out
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <Button asChild variant="hero" size="sm">
+                <Link to="/results">
+                  <Trophy className="h-4 w-4" /> Generate results
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await adminLock();
+                  navigate({ to: "/auth" });
+                }}
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </Button>
+            </div>
           </header>
 
           {overview.isLoading && <Skeleton className="mt-8 h-72 rounded-3xl" />}
