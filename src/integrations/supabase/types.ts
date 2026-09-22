@@ -117,6 +117,7 @@ export type Database = {
           id: string
           is_blocked: boolean
           name: string
+          vote_code: string | null
         }
         Insert: {
           admission_number: string
@@ -125,6 +126,7 @@ export type Database = {
           id?: string
           is_blocked?: boolean
           name: string
+          vote_code?: string | null
         }
         Update: {
           admission_number?: string
@@ -133,6 +135,7 @@ export type Database = {
           id?: string
           is_blocked?: boolean
           name?: string
+          vote_code?: string | null
         }
         Relationships: []
       }
