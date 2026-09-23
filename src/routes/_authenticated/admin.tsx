@@ -790,3 +790,286 @@ function AnalyticsPanel({ positions, candidates, votes, students, settings }: An
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ELECTION RESULTS PANEL
+   Live winner / loser breakdown per position.
+   Derives everything from the votes array — nothing hardcoded.
+═══════════════════════════════════════════════════════════ */
+
+type ResultsProps = {
+  positions: { id: string; title: string; display_order: number }[];
+  candidates: {
+    id: string;
+    name: string;
+    position_id: string;
+    image_url?: string | null;
+    class?: string | null;
+    is_active: boolean;
+  }[];
+  votes: { candidate_id: string; position_id: string; student_id: string | null }[];
+};
+
+type CandidateResult = {
+  id: string;
+  name: string;
+  image_url: string | null;
+  class: string | null;
+  votes: number;
+  pct: number;
+  isWinner: boolean;
+  isTied: boolean;
+};
+
+type PositionResult = {
+  id: string;
+  title: string;
+  totalVotes: number;
+  hasTie: boolean;
+  winner: CandidateResult | null;
+  others: CandidateResult[];
+};
+
+/** Animated progress bar — fills from 0 on first render */
+function ResultBar({ pct, winner }: { pct: number; winner: boolean }) {
+  const [width, setWidth] = useState(0);
+  // Trigger fill after mount so CSS transition plays
+  useState(() => { setTimeout(() => setWidth(pct), 80); });
+
+  return (
+    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className={`h-full rounded-full transition-all duration-700 ease-out ${winner ? "gradient-primary" : "bg-muted-foreground/30"}`}
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  );
+}
+
+/** Single candidate row used inside the loser list */
+function LoserRow({ c }: { c: CandidateResult }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/60 px-4 py-3">
+      {/* avatar */}
+      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
+        {c.image_url ? (
+          <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-sm font-black text-muted-foreground">
+            {c.name.charAt(0)}
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
+          {c.class && <span className="shrink-0 text-xs text-muted-foreground">{c.class}</span>}
+          <span className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <XCircle className="h-3 w-3" /> Lost
+          </span>
+        </div>
+        <ResultBar pct={c.pct} winner={false} />
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="font-display text-base font-bold tabular-nums text-foreground">{c.votes}</p>
+        <p className="text-[10px] text-muted-foreground">{c.pct}%</p>
+      </div>
+    </div>
+  );
+}
+
+/** Full position result block — winner card + loser list */
+function PositionResultCard({ result }: { result: PositionResult }) {
+  const w = result.winner;
+
+  return (
+    <section className="glass overflow-hidden rounded-3xl">
+      {/* ── header ── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 bg-primary/5 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-xl gradient-primary text-primary-foreground">
+            <Trophy className="h-4 w-4" />
+          </span>
+          <h3 className="font-display text-lg font-bold">{result.title}</h3>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="tabular-nums">
+            {result.totalVotes} vote{result.totalVotes !== 1 ? "s" : ""}
+          </span>
+          {result.hasTie && (
+            <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-600">
+              Tie
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6">
+        {result.totalVotes === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">No votes recorded yet.</p>
+        ) : (
+          <div className="space-y-5">
+            {/* ── winner card ── */}
+            {w && (
+              <div className="relative overflow-hidden rounded-2xl border-2 border-primary/40 bg-primary/[0.05] p-5">
+                {/* subtle spotlight */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-2xl"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(34,197,94,0.09) 0%, transparent 70%)",
+                  }}
+                />
+                <div className="relative flex flex-wrap items-center gap-4">
+                  {/* avatar */}
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl ring-2 ring-primary/50 shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+                    {w.image_url ? (
+                      <img src={w.image_url} alt={w.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center gradient-primary font-display text-2xl font-black text-primary-foreground">
+                        {w.name.charAt(0)}
+                      </div>
+                    )}
+                    {/* gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent" />
+                  </div>
+
+                  {/* name + bar */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-display text-xl font-black text-foreground">{w.name}</span>
+                      {w.class && <span className="text-xs text-muted-foreground">{w.class}</span>}
+                      <span className="inline-flex items-center gap-1 rounded-full gradient-primary px-3 py-0.5 text-[11px] font-bold uppercase tracking-widest text-primary-foreground shadow-[0_0_10px_var(--primary)]">
+                        <Crown className="h-3 w-3" />
+                        {result.hasTie ? "Tied" : "Winner"}
+                      </span>
+                    </div>
+                    <ResultBar pct={w.pct} winner />
+                  </div>
+
+                  {/* vote count */}
+                  <div className="shrink-0 text-right">
+                    <p className="font-display text-3xl font-black tabular-nums text-primary">{w.votes}</p>
+                    <p className="text-xs text-muted-foreground">votes</p>
+                    <p className="mt-0.5 text-xs font-mono text-primary/70">{w.pct}%</p>
+                  </div>
+                </div>
+
+                {/* margin note */}
+                {!result.hasTie && result.others.length > 0 && result.others[0].votes > 0 && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Winning margin:{" "}
+                    <strong className="text-foreground">
+                      +{w.votes - result.others[0].votes} vote{w.votes - result.others[0].votes !== 1 ? "s" : ""}
+                    </strong>{" "}
+                    over {result.others[0].name}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* ── losers ── */}
+            {result.others.length > 0 && (
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Other candidates
+                </p>
+                <div className="space-y-2">
+                  {result.others.map((c) => (
+                    <LoserRow key={c.id} c={c} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ElectionResultsPanel({ positions, candidates, votes }: ResultsProps) {
+  // Derive results purely from props — no hardcoding
+  const positionResults: PositionResult[] = positions.map((p) => {
+    const list = candidates
+      .filter((c) => c.position_id === p.id)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        image_url: c.image_url ?? null,
+        class: c.class ?? null,
+        votes: votes.filter((v) => v.candidate_id === c.id).length,
+        pct: 0,
+        isWinner: false,
+        isTied: false,
+      }))
+      .sort((a, b) => b.votes - a.votes);
+
+    const total = list.reduce((s, c) => s + c.votes, 0);
+    const topCount = list[0]?.votes ?? 0;
+    const leaders = list.filter((c) => c.votes === topCount && topCount > 0);
+    const hasTie = leaders.length > 1;
+
+    const enriched: CandidateResult[] = list.map((c) => ({
+      ...c,
+      pct: total > 0 ? Math.round((c.votes / total) * 1000) / 10 : 0,
+      isWinner: topCount > 0 && c.votes === topCount,
+      isTied: hasTie && c.votes === topCount,
+    }));
+
+    // In a tie every top candidate is a "winner" — show the first as winner card,
+    // rest in others (all marked tied). If no votes, winner is null.
+    const winner = topCount > 0 ? enriched[0] : null;
+    const others = topCount > 0 ? enriched.slice(1) : enriched;
+
+    return {
+      id: p.id,
+      title: p.title,
+      totalVotes: total,
+      hasTie,
+      winner,
+      others,
+    };
+  });
+
+  const totalVotes = votes.length;
+  const anyVotes = totalVotes > 0;
+
+  return (
+    <div className="space-y-6">
+      {/* summary banner */}
+      <div className="glass flex flex-wrap items-center gap-4 rounded-3xl px-5 py-4">
+        <Medal className="h-5 w-5 shrink-0 text-primary" />
+        <div className="min-w-0">
+          <p className="font-display font-semibold">Election Results</p>
+          <p className="text-xs text-muted-foreground">
+            {anyVotes
+              ? `Based on ${totalVotes} total vote${totalVotes !== 1 ? "s" : ""} — updates live every 3 seconds`
+              : "No votes have been cast yet"}
+          </p>
+        </div>
+        {anyVotes && (
+          <div className="ml-auto flex flex-wrap gap-2">
+            {positionResults.map((r) =>
+              r.winner ? (
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                >
+                  <Crown className="h-3 w-3" />
+                  {r.title}: {r.hasTie ? "Tie" : r.winner.name}
+                </span>
+              ) : null,
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* per-position cards */}
+      {positionResults.map((result) => (
+        <PositionResultCard key={result.id} result={result} />
+      ))}
+    </div>
+  );
+}
