@@ -39,7 +39,7 @@ function ResultsPage() {
       {/* inject reveal keyframes once */}
       <RevealStyles />
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <SiteHeader />
 
         {/* back nav — always visible */}
