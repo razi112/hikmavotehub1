@@ -1,0 +1,3 @@
+- [ ] Add protected Poster Generator page with live results, tie handling, preview, and download.
+- [ ] Add poster access from the admin dashboard and include organization logo data.
+- [ ] Verify the route, calculations, preview states, and download behavior.

@@ -87,6 +87,7 @@ export async function generateResults() {
     generatedAt: new Date().toISOString(),
     electionStatus: settingsRes.data?.election_status ?? "open",
     websiteName: settingsRes.data?.website_name ?? "Hikma Vote",
+    logoUrl: settingsRes.data?.logo_url ?? null,
     totals: {
       totalVoters,
       totalVotes: votes.length,
