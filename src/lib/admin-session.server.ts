@@ -4,8 +4,10 @@ import { createHash, timingSafeEqual } from "node:crypto";
 type AdminSession = { unlocked?: boolean };
 
 function sessionConfig() {
+  const secret = process.env["ADMIN_SESSION_SECRET"];
+  if (!secret) throw new Error("ADMIN_SESSION_SECRET is not set in environment variables");
   return {
-    password: process.env["ADMIN_SESSION_SECRET"]!,
+    password: secret,
     name: "hikma-admin",
     maxAge: 60 * 60 * 8,
     cookie: { httpOnly: true, secure: true, sameSite: "none" as const, path: "/" },
