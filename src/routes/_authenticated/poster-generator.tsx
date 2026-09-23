@@ -76,10 +76,16 @@ function PosterGeneratorPage() {
     const escapeXml = (value: string) =>
       value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-    // Photo fills top 62% (0–744px of 1200px height) with object-top alignment
+    const rawUrl = winner.image_url ?? "";
+    const hashIdx = rawUrl.indexOf("#offset=");
+    const cleanImageUrl = hashIdx !== -1 ? rawUrl.slice(0, hashIdx) : rawUrl;
+    const offsetPct = hashIdx !== -1 ? parseInt(rawUrl.slice(hashIdx + 8), 10) : 0;
     const photoH = 744;
-    const image = winner.image_url
-      ? `<image href="${escapeXml(winner.image_url)}" x="0" y="0" width="900" height="${photoH}" preserveAspectRatio="xMidYMin slice" clip-path="url(#photo)"/>`
+    // In SVG, shift the image up by applying a translateY based on offset
+    const svgImgY = Math.round(0 - (photoH * offsetPct) / 100);
+
+    const image = cleanImageUrl
+      ? `<image href="${escapeXml(cleanImageUrl)}" x="0" y="${svgImgY}" width="900" height="${photoH + Math.abs(svgImgY)}" preserveAspectRatio="xMidYMin slice" clip-path="url(#photo)"/>`
       : `<rect x="0" y="0" width="900" height="${photoH}" fill="#134d38"/><text x="450" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="320" font-weight="900" fill="#ffffff22">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
     const logo = data.logoUrl
       ? `<image href="${escapeXml(data.logoUrl)}" x="50" y="1110" width="60" height="60" preserveAspectRatio="xMidYMid meet" opacity="0.6"/>`
@@ -286,6 +292,13 @@ function PosterGeneratorPage() {
 }
 
 function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: { position: PositionResult; winner: ResultCandidate; websiteName: string; logoUrl: string | null; generatedAt: string }) {
+  // Parse optional vertical offset from image_url hash e.g. ashkar.jpg#offset=20
+  const rawUrl = winner.image_url ?? "";
+  const hashIdx = rawUrl.indexOf("#offset=");
+  const cleanUrl = hashIdx !== -1 ? rawUrl.slice(0, hashIdx) : rawUrl;
+  const offsetPct = hashIdx !== -1 ? parseInt(rawUrl.slice(hashIdx + 8), 10) : 0;
+  // object-position: center <offsetPct>% — higher number = image shifts UP (face appears more)
+  const objPosition = `center ${offsetPct}%`;
   return (
     <div className="relative aspect-[3/4] overflow-hidden rounded-[2rem] bg-[#0c3b2e] text-white shadow-lift">
 
@@ -293,9 +306,10 @@ function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: 
       <div className="absolute inset-x-0 top-0 h-[62%]">
         {winner.image_url ? (
           <img
-            src={winner.image_url}
+            src={cleanUrl}
             alt={winner.name}
-            className="h-full w-full object-cover object-top"
+            className="h-full w-full object-cover"
+            style={{ objectPosition: objPosition }}
           />
         ) : (
           <div className="grid h-full place-items-center bg-primary/20">
