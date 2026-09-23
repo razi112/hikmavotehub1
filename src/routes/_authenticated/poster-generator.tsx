@@ -76,21 +76,29 @@ function PosterGeneratorPage() {
     const escapeXml = (value: string) =>
       value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const image = winner.image_url
-      ? `<image href="${escapeXml(winner.image_url)}" x="100" y="330" width="700" height="700" preserveAspectRatio="xMidYMid slice" clip-path="url(#portrait)"/>`
-      : `<circle cx="450" cy="680" r="230" fill="url(#gold)"/><text x="450" y="710" text-anchor="middle" font-family="Arial, sans-serif" font-size="180" font-weight="700" fill="#fff">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
+      ? `<image href="${escapeXml(winner.image_url)}" x="150" y="260" width="600" height="750" preserveAspectRatio="xMidYMin slice" clip-path="url(#portrait)"/>`
+      : `<circle cx="450" cy="660" r="280" fill="url(#gold)"/><text x="450" y="710" text-anchor="middle" font-family="Arial, sans-serif" font-size="200" font-weight="700" fill="#fff">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
     const logo = data.logoUrl
       ? `<image href="${escapeXml(data.logoUrl)}" x="90" y="90" width="96" height="96" preserveAspectRatio="xMidYMid meet"/>`
       : "";
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
-      <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c3b2e"/><stop offset="1" stop-color="#176b4d"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4d27b"/><stop offset="1" stop-color="#c58b27"/></linearGradient><clipPath id="portrait"><circle cx="450" cy="680" r="230"/></clipPath></defs>
-      <rect width="900" height="1200" fill="url(#bg)"/><circle cx="450" cy="680" r="250" fill="none" stroke="#f4d27b" stroke-width="10" opacity=".9"/><circle cx="450" cy="680" r="265" fill="none" stroke="#f4d27b" stroke-width="2" opacity=".5"/>
-      ${logo}<text x="810" y="132" text-anchor="end" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f4d27b">${escapeXml(data.websiteName)}</text>
-      <text x="450" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="7" fill="#f4d27b">WINNER</text>
-      <text x="450" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" letter-spacing="4" fill="#fff">OFFICIAL ELECTION RESULT</text>
-      ${image}<text x="450" y="990" text-anchor="middle" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#fff">${escapeXml(winner.name)}</text>
-      <text x="450" y="1040" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#f4d27b">${escapeXml(selectedPosition.title.toUpperCase())}</text>
-      <text x="450" y="1090" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#fff">${winner.votes} votes · ${winner.percentage}%</text>
-      <text x="450" y="1145" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#d7eee4">Congratulations on this achievement</text>
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c3b2e"/><stop offset="1" stop-color="#176b4d"/></linearGradient>
+        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4d27b"/><stop offset="1" stop-color="#c58b27"/></linearGradient>
+        <clipPath id="portrait"><circle cx="450" cy="660" r="280"/></clipPath>
+      </defs>
+      <rect width="900" height="1200" fill="url(#bg)"/>
+      <circle cx="450" cy="660" r="300" fill="none" stroke="#f4d27b" stroke-width="10" opacity=".9"/>
+      <circle cx="450" cy="660" r="316" fill="none" stroke="#f4d27b" stroke-width="2" opacity=".5"/>
+      ${logo}
+      <text x="810" y="132" text-anchor="end" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f4d27b">${escapeXml(data.websiteName)}</text>
+      <text x="450" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="7" fill="#f4d27b">WINNER</text>
+      <text x="450" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" letter-spacing="4" fill="#fff">OFFICIAL ELECTION RESULT</text>
+      ${image}
+      <text x="450" y="1020" text-anchor="middle" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#fff">${escapeXml(winner.name)}</text>
+      <text x="450" y="1070" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#f4d27b">${escapeXml(selectedPosition.title.toUpperCase())}</text>
+      <text x="450" y="1115" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#fff">${winner.votes} votes · ${winner.percentage}%</text>
+      <text x="450" y="1160" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#d7eee4">Congratulations on this achievement</text>
     </svg>`;
     const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -251,11 +259,11 @@ function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: 
           {logoUrl ? <img src={logoUrl} alt="Organization logo" className="h-10 w-10 rounded-xl object-contain" /> : <span className="grid h-10 w-10 place-items-center rounded-xl gradient-gold text-gold-foreground"><Users className="h-5 w-5" /></span>}
           <span className="max-w-[65%] truncate text-xs font-semibold uppercase tracking-wider text-gold">{websiteName}</span>
         </div>
-        <div className="mt-8 rounded-full border border-gold/50 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-gold">Winner</div>
-        <div className="relative mt-8 h-40 w-40 overflow-hidden rounded-full border-4 border-gold bg-accent shadow-glow sm:h-48 sm:w-48">
-          {winner.image_url ? <img src={winner.image_url} alt={winner.name} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center font-display text-6xl font-bold text-primary">{winner.name.charAt(0)}</div>}
+        <div className="mt-4 rounded-full border border-gold/50 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-gold">Winner</div>
+        <div className="relative mt-4 w-[70%] max-w-[260px] aspect-square overflow-hidden rounded-full border-4 border-gold bg-accent shadow-glow">
+          {winner.image_url ? <img src={winner.image_url} alt={winner.name} className="h-full w-full object-cover object-top" /> : <div className="grid h-full place-items-center font-display text-6xl font-bold text-primary">{winner.name.charAt(0)}</div>}
         </div>
-        <p className="mt-7 font-display text-2xl font-bold sm:text-3xl">{winner.name}</p>
+        <p className="mt-4 font-display text-2xl font-bold sm:text-3xl">{winner.name}</p>
         <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-gold">{position.title}</p>
         <div className="mt-auto w-full border-t border-primary-foreground/20 pt-5"><p className="text-lg font-semibold">{winner.votes} votes · {winner.percentage}%</p><p className="mt-3 text-xs text-primary-foreground/70">Congratulations on this achievement</p><p className="mt-2 text-[10px] text-primary-foreground/50">Result announced {new Date(generatedAt).toLocaleDateString()}</p></div>
       </div>
