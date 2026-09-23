@@ -6,11 +6,17 @@ type AdminSession = { unlocked?: boolean };
 function sessionConfig() {
   const secret = process.env["ADMIN_SESSION_SECRET"];
   if (!secret) throw new Error("ADMIN_SESSION_SECRET is not set in environment variables");
+  const isProd = process.env["NODE_ENV"] === "production";
   return {
     password: secret,
     name: "hikma-admin",
     maxAge: 60 * 60 * 8,
-    cookie: { httpOnly: true, secure: true, sameSite: "none" as const, path: "/" },
+    cookie: {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? ("none" as const) : ("lax" as const),
+      path: "/",
+    },
   };
 }
 

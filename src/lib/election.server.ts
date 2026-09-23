@@ -141,7 +141,9 @@ export async function buildTally(): Promise<Tally> {
   for (const v of votes) {
     perCandidate[v.candidate_id] = (perCandidate[v.candidate_id] ?? 0) + 1;
     perPosition[v.position_id] = (perPosition[v.position_id] ?? 0) + 1;
-    if (v.student_id) voters.add(v.student_id);
+    // count by student_id if present, otherwise by voter_token
+    const voterId = v.student_id ?? (v as any).voter_token;
+    if (voterId) voters.add(voterId);
     const hour = `${String(new Date(v.created_at).getHours()).padStart(2, "0")}:00`;
     hourMap.set(hour, (hourMap.get(hour) ?? 0) + 1);
   }

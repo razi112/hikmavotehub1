@@ -135,7 +135,10 @@ function AdminPage() {
 
   const stats = [
     { label: "Total votes", value: votes.length },
-    { label: "Students voted", value: new Set(votes.map((v) => v.student_id)).size },
+    {
+      label: "Students voted",
+      value: new Set(votes.map((v) => v.student_id ?? (v as any).voter_token)).size,
+    },
     { label: "Candidates", value: candidates.length },
     { label: "Registered students", value: students.length },
   ];

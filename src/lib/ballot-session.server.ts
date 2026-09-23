@@ -4,11 +4,17 @@ import { randomUUID } from "node:crypto";
 type BallotSession = { token?: string };
 
 function sessionConfig() {
+  const isProd = process.env["NODE_ENV"] === "production";
   return {
     password: process.env["ADMIN_SESSION_SECRET"]!,
     name: "hikma-ballot",
     maxAge: 60 * 60 * 24 * 30,
-    cookie: { httpOnly: true, secure: true, sameSite: "none" as const, path: "/" },
+    cookie: {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? ("none" as const) : ("lax" as const),
+      path: "/",
+    },
   };
 }
 
