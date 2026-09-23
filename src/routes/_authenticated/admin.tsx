@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Activity, BarChart3, LogOut, Plus, Trash2, Trophy, Users } from "lucide-react";
+import { Activity, BarChart3, ImageIcon, LogOut, Plus, Trash2, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
 import { adminLock } from "@/lib/admin-gate.functions";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -162,6 +162,11 @@ function AdminPage() {
               )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/poster-generator">
+                  <ImageIcon className="h-4 w-4" /> Poster generator
+                </Link>
+              </Button>
               <Button asChild variant="hero" size="sm">
                 <Link to="/results">
                   <Trophy className="h-4 w-4" /> Generate results
