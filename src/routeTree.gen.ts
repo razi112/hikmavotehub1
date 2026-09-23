@@ -16,6 +16,7 @@ import { Route as CandidatesRouteImport } from './routes/candidates'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as VoteRouteImport } from './routes/vote'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedPosterGeneratorRouteImport } from './routes/_authenticated/poster-generator'
 import { Route as AuthenticatedResultsRouteImport } from './routes/_authenticated/results'
 
 const IndexRoute = IndexRouteImport.update({
@@ -52,6 +53,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPosterGeneratorRoute =
+  AuthenticatedPosterGeneratorRouteImport.update({
+    id: '/poster-generator',
+    path: '/poster-generator',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedResultsRoute = AuthenticatedResultsRouteImport.update({
   id: '/results',
   path: '/results',
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/poster-generator': typeof AuthenticatedPosterGeneratorRoute
   '/results': typeof AuthenticatedResultsRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/poster-generator': typeof AuthenticatedPosterGeneratorRoute
   '/results': typeof AuthenticatedResultsRoute
 }
 export interface FileRoutesById {
@@ -85,6 +94,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vote': typeof VoteRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/poster-generator': typeof AuthenticatedPosterGeneratorRoute
   '/_authenticated/results': typeof AuthenticatedResultsRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/vote'
     | '/admin'
+    | '/poster-generator'
     | '/results'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/vote'
     | '/admin'
+    | '/poster-generator'
     | '/results'
   id:
     | '__root__'
@@ -115,6 +127,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/vote'
     | '/_authenticated/admin'
+    | '/_authenticated/poster-generator'
     | '/_authenticated/results'
   fileRoutesById: FileRoutesById
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/poster-generator': {
+      id: '/_authenticated/poster-generator'
+      path: '/poster-generator'
+      fullPath: '/poster-generator'
+      preLoaderRoute: typeof AuthenticatedPosterGeneratorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/results': {
       id: '/_authenticated/results'
       path: '/results'
@@ -190,11 +210,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedPosterGeneratorRoute: typeof AuthenticatedPosterGeneratorRoute
   AuthenticatedResultsRoute: typeof AuthenticatedResultsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedPosterGeneratorRoute: AuthenticatedPosterGeneratorRoute,
   AuthenticatedResultsRoute: AuthenticatedResultsRoute,
 }
 
