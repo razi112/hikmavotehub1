@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Download, ImageIcon, RefreshCw, Trophy, Users, X } from "lucide-react";
+import { CheckCircle2, Download, ImageIcon, RefreshCw, Trophy, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -75,31 +75,66 @@ function PosterGeneratorPage() {
 
     const escapeXml = (value: string) =>
       value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    // Photo fills top 62% (0–744px of 1200px height) with object-top alignment
+    const photoH = 744;
     const image = winner.image_url
-      ? `<image href="${escapeXml(winner.image_url)}" x="150" y="260" width="600" height="750" preserveAspectRatio="xMidYMin slice" clip-path="url(#portrait)"/>`
-      : `<circle cx="450" cy="660" r="280" fill="url(#gold)"/><text x="450" y="710" text-anchor="middle" font-family="Arial, sans-serif" font-size="200" font-weight="700" fill="#fff">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
+      ? `<image href="${escapeXml(winner.image_url)}" x="0" y="0" width="900" height="${photoH}" preserveAspectRatio="xMidYMin slice" clip-path="url(#photo)"/>`
+      : `<rect x="0" y="0" width="900" height="${photoH}" fill="#134d38"/><text x="450" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="320" font-weight="900" fill="#ffffff22">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
     const logo = data.logoUrl
-      ? `<image href="${escapeXml(data.logoUrl)}" x="90" y="90" width="96" height="96" preserveAspectRatio="xMidYMid meet"/>`
+      ? `<image href="${escapeXml(data.logoUrl)}" x="50" y="1110" width="60" height="60" preserveAspectRatio="xMidYMid meet" opacity="0.6"/>`
       : "";
+
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c3b2e"/><stop offset="1" stop-color="#176b4d"/></linearGradient>
-        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4d27b"/><stop offset="1" stop-color="#c58b27"/></linearGradient>
-        <clipPath id="portrait"><circle cx="450" cy="660" r="280"/></clipPath>
-      </defs>
-      <rect width="900" height="1200" fill="url(#bg)"/>
-      <circle cx="450" cy="660" r="300" fill="none" stroke="#f4d27b" stroke-width="10" opacity=".9"/>
-      <circle cx="450" cy="660" r="316" fill="none" stroke="#f4d27b" stroke-width="2" opacity=".5"/>
-      ${logo}
-      <text x="810" y="132" text-anchor="end" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f4d27b">${escapeXml(data.websiteName)}</text>
-      <text x="450" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="7" fill="#f4d27b">WINNER</text>
-      <text x="450" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" letter-spacing="4" fill="#fff">OFFICIAL ELECTION RESULT</text>
-      ${image}
-      <text x="450" y="1020" text-anchor="middle" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#fff">${escapeXml(winner.name)}</text>
-      <text x="450" y="1070" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#f4d27b">${escapeXml(selectedPosition.title.toUpperCase())}</text>
-      <text x="450" y="1115" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#fff">${winner.votes} votes · ${winner.percentage}%</text>
-      <text x="450" y="1160" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#d7eee4">Congratulations on this achievement</text>
-    </svg>`;
+  <defs>
+    <linearGradient id="bgBot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0c3b2e"/>
+      <stop offset="1" stop-color="#061f18"/>
+    </linearGradient>
+    <linearGradient id="fadeUp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0c3b2e" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0c3b2e" stop-opacity="1"/>
+    </linearGradient>
+    <clipPath id="photo"><rect x="0" y="0" width="900" height="${photoH}" rx="0"/></clipPath>
+  </defs>
+
+  <!-- background -->
+  <rect width="900" height="1200" fill="url(#bgBot)"/>
+
+  <!-- full-bleed photo -->
+  ${image}
+
+  <!-- gradient fade from photo into info panel -->
+  <rect x="0" y="${photoH - 180}" width="900" height="220" fill="url(#fadeUp)"/>
+
+  <!-- info panel bg -->
+  <rect x="0" y="${photoH}" width="900" height="${1200 - photoH}" fill="#0c3b2e"/>
+
+  <!-- winner badge -->
+  <rect x="300" y="762" width="300" height="44" rx="22" fill="none" stroke="#f4d27b" stroke-width="1.5" opacity="0.7"/>
+  <text x="450" y="790" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="5" fill="#f4d27b">WINNER</text>
+
+  <!-- name -->
+  <text x="450" y="880" text-anchor="middle" font-family="Arial,sans-serif" font-size="58" font-weight="900" fill="#ffffff">${escapeXml(winner.name)}</text>
+
+  <!-- position -->
+  <text x="450" y="930" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#f4d27b">${escapeXml(selectedPosition.title.toUpperCase())}</text>
+
+  <!-- divider -->
+  <line x1="200" y1="965" x2="700" y2="965" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+
+  <!-- votes strip -->
+  <rect x="250" y="985" width="400" height="60" rx="16" fill="#ffffff" fill-opacity="0.07"/>
+  <text x="450" y="1024" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff">${winner.votes} votes · ${winner.percentage}%</text>
+
+  <!-- congrats -->
+  <text x="450" y="1095" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#d7eee4" opacity="0.7">Congratulations on this achievement</text>
+
+  <!-- footer -->
+  ${logo}
+  <text x="450" y="1155" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="600" letter-spacing="3" fill="#ffffff" opacity="0.35">${escapeXml(data.websiteName.toUpperCase())}</text>
+  <text x="850" y="1155" text-anchor="end" font-family="Arial,sans-serif" font-size="14" fill="#ffffff" opacity="0.25">${new Date(data.generatedAt).toLocaleDateString()}</text>
+</svg>`;
     const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -252,20 +287,57 @@ function PosterGeneratorPage() {
 
 function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: { position: PositionResult; winner: ResultCandidate; websiteName: string; logoUrl: string | null; generatedAt: string }) {
   return (
-    <div className="relative aspect-[4/5] overflow-hidden bg-foreground px-7 py-8 text-center text-primary-foreground sm:px-10 sm:py-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,color-mix(in_oklab,var(--gold)_24%,transparent),transparent_32%),linear-gradient(135deg,var(--ink),color-mix(in_oklab,var(--primary)_72%,var(--ink)))]" />
-      <div className="relative flex h-full flex-col items-center">
-        <div className="flex w-full items-center justify-between gap-3">
-          {logoUrl ? <img src={logoUrl} alt="Organization logo" className="h-10 w-10 rounded-xl object-contain" /> : <span className="grid h-10 w-10 place-items-center rounded-xl gradient-gold text-gold-foreground"><Users className="h-5 w-5" /></span>}
-          <span className="max-w-[65%] truncate text-xs font-semibold uppercase tracking-wider text-gold">{websiteName}</span>
+    <div className="relative aspect-[3/4] overflow-hidden rounded-[2rem] bg-[#0c3b2e] text-white shadow-lift">
+
+      {/* ── full-bleed photo top 62% ── */}
+      <div className="absolute inset-x-0 top-0 h-[62%]">
+        {winner.image_url ? (
+          <img
+            src={winner.image_url}
+            alt={winner.name}
+            className="h-full w-full object-cover object-top"
+          />
+        ) : (
+          <div className="grid h-full place-items-center bg-primary/20">
+            <span className="font-display text-[8rem] font-black text-white/30">
+              {winner.name.charAt(0)}
+            </span>
+          </div>
+        )}
+        {/* gradient fade into bottom panel */}
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0c3b2e] to-transparent" />
+      </div>
+
+      {/* ── bottom info panel ── */}
+      <div className="absolute inset-x-0 bottom-0 h-[42%] flex flex-col items-center justify-between px-6 pb-5 pt-4">
+        {/* winner badge */}
+        <div className="flex items-center gap-2 rounded-full border border-[#f4d27b]/60 bg-[#f4d27b]/10 px-4 py-1.5">
+          <svg className="h-3.5 w-3.5 text-[#f4d27b]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/>
+          </svg>
+          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#f4d27b]">Winner</span>
         </div>
-        <div className="mt-4 rounded-full border border-gold/50 bg-gold/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-gold">Winner</div>
-        <div className="relative mt-4 w-[70%] max-w-[260px] aspect-square overflow-hidden rounded-full border-4 border-gold bg-accent shadow-glow">
-          {winner.image_url ? <img src={winner.image_url} alt={winner.name} className="h-full w-full object-cover object-top" /> : <div className="grid h-full place-items-center font-display text-6xl font-bold text-primary">{winner.name.charAt(0)}</div>}
+
+        {/* name */}
+        <div className="text-center">
+          <p className="font-display text-xl font-black leading-tight sm:text-2xl">{winner.name}</p>
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#f4d27b]">{position.title}</p>
         </div>
-        <p className="mt-4 font-display text-2xl font-bold sm:text-3xl">{winner.name}</p>
-        <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-gold">{position.title}</p>
-        <div className="mt-auto w-full border-t border-primary-foreground/20 pt-5"><p className="text-lg font-semibold">{winner.votes} votes · {winner.percentage}%</p><p className="mt-3 text-xs text-primary-foreground/70">Congratulations on this achievement</p><p className="mt-2 text-[10px] text-primary-foreground/50">Result announced {new Date(generatedAt).toLocaleDateString()}</p></div>
+
+        {/* votes strip */}
+        <div className="w-full rounded-xl bg-white/8 px-4 py-2 text-center backdrop-blur-sm">
+          <p className="text-sm font-bold">{winner.votes} votes &nbsp;·&nbsp; {winner.percentage}%</p>
+        </div>
+
+        {/* footer */}
+        <div className="flex w-full items-center justify-between">
+          {logoUrl
+            ? <img src={logoUrl} alt="logo" className="h-6 w-6 rounded object-contain opacity-70" />
+            : <span className="text-[10px] text-white/40">🏫</span>
+          }
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-white/40">{websiteName}</span>
+          <span className="text-[9px] text-white/30">{new Date(generatedAt).toLocaleDateString()}</span>
+        </div>
       </div>
     </div>
   );
