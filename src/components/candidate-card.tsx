@@ -25,13 +25,13 @@ export function CandidateCard({
         selected && "ring-2 ring-primary shadow-lift",
       )}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-accent">
+      <div className="relative aspect-[3/4] overflow-hidden bg-accent">
         {candidate.image_url ? (
           <img
             src={candidate.image_url}
             alt={`Portrait of ${candidate.name}`}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="grid h-full w-full place-items-center text-accent-foreground/50">

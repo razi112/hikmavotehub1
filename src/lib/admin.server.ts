@@ -77,7 +77,7 @@ export async function generateResults() {
       winnerIds: leaders.map((c) => c.id),
       candidates: list.map((c) => ({
         ...c,
-        percentage: total ? Math.round((c.votes / total) * 1000) / 10 : 0,
+        percentage: total > 0 ? Math.round((c.votes / total) * 1000) / 10 : 0,
         isWinner: top > 0 && c.votes === top,
       })),
     };

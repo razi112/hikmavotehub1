@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Activity, BarChart3, Crown, ImageIcon, LogOut, Plus, Trash2, Trophy, TrendingUp, Users } from "lucide-react";
+import { Activity, BarChart3, Crown, ImageIcon, LogOut, Medal, Plus, Trash2, Trophy, TrendingUp, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { adminLock } from "@/lib/admin-gate.functions";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
@@ -229,6 +229,9 @@ function AdminPage() {
                   <TabsTrigger value="analytics" className="rounded-full">
                     <BarChart3 className="mr-1.5 h-4 w-4" /> Analytics
                   </TabsTrigger>
+                  <TabsTrigger value="results" className="rounded-full">
+                    <Trophy className="mr-1.5 h-4 w-4" /> Results
+                  </TabsTrigger>
                   <TabsTrigger value="students" className="rounded-full">
                     <Users className="mr-1.5 h-4 w-4" /> Students
                   </TabsTrigger>
@@ -395,6 +398,14 @@ function AdminPage() {
                   />
                 </TabsContent>
 
+                <TabsContent value="results" className="mt-5">
+                  <ElectionResultsPanel
+                    positions={positions}
+                    candidates={candidates}
+                    votes={votes}
+                  />
+                </TabsContent>
+
                 <TabsContent value="students" className="mt-5">
                   <div className="space-y-3">
                     {students.map((s) => {
@@ -555,9 +566,6 @@ function PositionChart({
       {/* header */}
       <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-3 mb-4">
         <h3 className="font-display font-semibold">{title}</h3>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
-        </span>
       </div>
 
       {list.length === 0 ? (
@@ -583,7 +591,7 @@ function PositionChart({
                   </span>
                 </div>
                 <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{c.count}</span> · {c.pct}%
+                  <span className="font-semibold text-foreground">{c.count} vote{c.count === 1 ? "" : "s"}</span>
                 </span>
               </div>
               {/* bar */}
@@ -594,7 +602,7 @@ function PositionChart({
                       ? "gradient-primary"
                       : "bg-muted-foreground/30"
                   }`}
-                  style={{ width: `${c.pct}%` }}
+                  style={{ width: `${Math.min(c.pct, 100)}%` }}
                 />
               </div>
             </li>
@@ -636,7 +644,6 @@ function VoteTimeline({
           <TrendingUp className="h-4 w-4 text-primary" />
           Vote Distribution
         </h3>
-        <span className="text-xs text-muted-foreground">{total} total votes</span>
       </div>
       <div className="flex h-24 items-end gap-1.5">
         {counts.map((c, i) => {
@@ -679,8 +686,10 @@ function WinnerStrip({
       .filter((c) => c.position_id === p.id)
       .map((c) => ({ ...c, count: votes.filter((v) => v.candidate_id === c.id).length }))
       .sort((a, b) => b.count - a.count);
+    const total = list.reduce((s, c) => s + c.count, 0);
     const top = list[0];
-    return { position: p.title, winner: top?.count > 0 ? top.name : null, count: top?.count ?? 0 };
+    const pct = total > 0 && top ? Math.round((top.count / total) * 1000) / 10 : 0;
+    return { position: p.title, winner: top?.count > 0 ? top.name : null, pct };
   });
 
   const anyWinner = winners.some((w) => w.winner);
@@ -701,9 +710,6 @@ function WinnerStrip({
               <span className="text-xs text-muted-foreground">{w.position}</span>
               <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
               <span className="font-semibold">{w.winner}</span>
-              <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
-                {w.count}v
-              </span>
             </div>
           ) : null,
         )}
@@ -727,8 +733,6 @@ function AnalyticsPanel({ positions, candidates, votes, students, settings }: An
         id: c.id,
         name: c.name,
         count: votes.filter((v) => v.candidate_id === c.id).length,
-        pct: 0,
-        isLeader: false,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -740,9 +744,11 @@ function AnalyticsPanel({ positions, candidates, votes, students, settings }: An
       title: p.title,
       totalVotes: total,
       list: list.map((c) => ({
-        ...c,
-        pct: total > 0 ? Math.round((c.count / total) * 100) : 0,
-        isLeader: c.count === topCount,
+        id: c.id,
+        name: c.name,
+        count: c.count,
+        pct: total > 0 ? Math.round((c.count / total) * 1000) / 10 : 0,
+        isLeader: total > 0 && topCount > 0 && c.count === topCount,
       })),
     };
   });

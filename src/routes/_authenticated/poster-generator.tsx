@@ -69,86 +69,224 @@ function PosterGeneratorPage() {
     toast.success(`${leaders[0]?.name} poster is ready`);
   }
 
-  function downloadPoster() {
+  async function downloadPoster() {
     const winner = leaders[0];
     if (!selectedPosition || !winner || !data) return;
 
-    const escapeXml = (value: string) =>
-      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const W = 900;
+    const H = 1200;
+    const PHOTO_H = 744;
 
-    const rawUrl = winner.image_url ?? "";
-    const hashIdx = rawUrl.indexOf("#offset=");
-    const cleanImageUrl = hashIdx !== -1 ? rawUrl.slice(0, hashIdx) : rawUrl;
-    const offsetPct = hashIdx !== -1 ? parseInt(rawUrl.slice(hashIdx + 8), 10) : 0;
-    const photoH = 744;
-    // In SVG, shift the image up by applying a translateY based on offset
-    const svgImgY = Math.round(0 - (photoH * offsetPct) / 100);
+    // ── helpers ─────────────────────────────────────────────────────────────
+    /**
+     * Load an image for canvas drawing.
+     * First tries crossOrigin="anonymous" (works when the server sends CORS headers).
+     * If that fails (CORS denied), falls back to fetching through a data-URL so the
+     * canvas doesn't get tainted.  As a last resort the image is skipped (null).
+     */
+    function loadCrossOriginImg(src: string): Promise<HTMLImageElement | null> {
+      return new Promise((resolve) => {
+        // Attempt 1 — native crossOrigin request
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+          // Attempt 2 — fetch as blob → object URL (works when CORS is allowed on fetch)
+          fetch(src, { mode: "cors", cache: "force-cache" })
+            .then(async (res) => {
+              if (!res.ok) return resolve(null);
+              const blob = await res.blob();
+              const objectUrl = URL.createObjectURL(blob);
+              const img2 = new Image();
+              img2.onload = () => { URL.revokeObjectURL(objectUrl); resolve(img2); };
+              img2.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(null); };
+              img2.src = objectUrl;
+            })
+            .catch(() => resolve(null));
+        };
+        // Add cache-busting only on retry to avoid stale no-CORS cached response
+        img.src = src;
+      });
+    }
 
-    const image = cleanImageUrl
-      ? `<image href="${escapeXml(cleanImageUrl)}" x="0" y="${svgImgY}" width="900" height="${photoH + Math.abs(svgImgY)}" preserveAspectRatio="xMidYMin slice" clip-path="url(#photo)"/>`
-      : `<rect x="0" y="0" width="900" height="${photoH}" fill="#134d38"/><text x="450" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="320" font-weight="900" fill="#ffffff22">${escapeXml(winner.name.charAt(0).toUpperCase())}</text>`;
-    const logo = data.logoUrl
-      ? `<image href="${escapeXml(data.logoUrl)}" x="50" y="1110" width="60" height="60" preserveAspectRatio="xMidYMid meet" opacity="0.6"/>`
-      : "";
+    /** Rounded rectangle helper */
+    function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
 
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
-  <defs>
-    <linearGradient id="bgBot" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0c3b2e"/>
-      <stop offset="1" stop-color="#061f18"/>
-    </linearGradient>
-    <linearGradient id="fadeUp" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0c3b2e" stop-opacity="0"/>
-      <stop offset="1" stop-color="#0c3b2e" stop-opacity="1"/>
-    </linearGradient>
-    <clipPath id="photo"><rect x="0" y="0" width="900" height="${photoH}" rx="0"/></clipPath>
-  </defs>
+    toast.loading("Generating PNG…", { id: "dl" });
 
-  <!-- background -->
-  <rect width="900" height="1200" fill="url(#bgBot)"/>
+    try {
+      // ── resolve images ───────────────────────────────────────────────────
+      const rawUrl = winner.image_url ?? "";
+      const hashIdx = rawUrl.indexOf("#offset=");
+      const cleanPhotoUrl = hashIdx !== -1 ? rawUrl.slice(0, hashIdx) : rawUrl;
+      const offsetPct = hashIdx !== -1 ? parseInt(rawUrl.slice(hashIdx + 8), 10) : 0;
 
-  <!-- full-bleed photo -->
-  ${image}
+      const [photoImg, logoImg] = await Promise.all([
+        cleanPhotoUrl ? loadCrossOriginImg(cleanPhotoUrl) : Promise.resolve(null),
+        data.logoUrl ? loadCrossOriginImg(data.logoUrl) : Promise.resolve(null),
+      ]);
 
-  <!-- gradient fade from photo into info panel -->
-  <rect x="0" y="${photoH - 180}" width="900" height="220" fill="url(#fadeUp)"/>
+      // ── canvas setup ─────────────────────────────────────────────────────
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
 
-  <!-- info panel bg -->
-  <rect x="0" y="${photoH}" width="900" height="${1200 - photoH}" fill="#0c3b2e"/>
+      // background gradient
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#0c3b2e");
+      bg.addColorStop(1, "#061f18");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
 
-  <!-- winner badge -->
-  <rect x="300" y="762" width="300" height="44" rx="22" fill="none" stroke="#f4d27b" stroke-width="1.5" opacity="0.7"/>
-  <text x="450" y="790" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="5" fill="#f4d27b">WINNER</text>
+      // ── photo area ───────────────────────────────────────────────────────
+      ctx.save();
+      ctx.rect(0, 0, W, PHOTO_H);
+      ctx.clip();
+      if (photoImg) {
+        // Cover-fit with vertical offset
+        const imgAspect = photoImg.width / photoImg.height;
+        const areaAspect = W / PHOTO_H;
+        let drawW: number, drawH: number, drawX: number, drawY: number;
+        if (imgAspect > areaAspect) {
+          // image wider than area — fit height, centre horizontally
+          drawH = PHOTO_H;
+          drawW = drawH * imgAspect;
+          drawX = (W - drawW) / 2;
+          drawY = -((PHOTO_H * offsetPct) / 100);
+        } else {
+          // image taller than area — fit width, shift by offset
+          drawW = W;
+          drawH = drawW / imgAspect;
+          drawX = 0;
+          const maxShift = drawH - PHOTO_H;
+          drawY = -((maxShift * offsetPct) / 100);
+        }
+        ctx.drawImage(photoImg, drawX, drawY, drawW, drawH);
+      } else {
+        // fallback initials block
+        ctx.fillStyle = "#134d38";
+        ctx.fillRect(0, 0, W, PHOTO_H);
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        ctx.font = "900 320px Arial,sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(winner.name.charAt(0).toUpperCase(), W / 2, PHOTO_H / 2);
+      }
+      ctx.restore();
 
-  <!-- name -->
-  <text x="450" y="880" text-anchor="middle" font-family="Arial,sans-serif" font-size="58" font-weight="900" fill="#ffffff">${escapeXml(winner.name)}</text>
+      // gradient fade from photo into panel
+      const fade = ctx.createLinearGradient(0, PHOTO_H - 180, 0, PHOTO_H + 40);
+      fade.addColorStop(0, "rgba(12,59,46,0)");
+      fade.addColorStop(1, "rgba(12,59,46,1)");
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, PHOTO_H - 180, W, 220);
 
-  <!-- position -->
-  <text x="450" y="930" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#f4d27b">${escapeXml(selectedPosition.title.toUpperCase())}</text>
+      // info panel
+      ctx.fillStyle = "#0c3b2e";
+      ctx.fillRect(0, PHOTO_H, W, H - PHOTO_H);
 
-  <!-- divider -->
-  <line x1="200" y1="965" x2="700" y2="965" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+      // ── winner badge ─────────────────────────────────────────────────────
+      ctx.save();
+      roundRect(ctx, 300, 762, 300, 44, 22);
+      ctx.strokeStyle = "rgba(244,210,123,0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#f4d27b";
+      ctx.font = "700 16px Arial,sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.letterSpacing = "5px";
+      ctx.fillText("WINNER", W / 2, 784);
+      ctx.letterSpacing = "0px";
+      ctx.restore();
 
-  <!-- votes strip -->
-  <rect x="250" y="985" width="400" height="60" rx="16" fill="#ffffff" fill-opacity="0.07"/>
-  <text x="450" y="1024" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" font-weight="700" fill="#ffffff">${winner.votes} votes · ${winner.percentage}%</text>
+      // name
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 58px Arial,sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(winner.name, W / 2, 880);
 
-  <!-- congrats -->
-  <text x="450" y="1095" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#d7eee4" opacity="0.7">Congratulations on this achievement</text>
+      // position title
+      ctx.fillStyle = "#f4d27b";
+      ctx.font = "700 22px Arial,sans-serif";
+      ctx.fillText(selectedPosition.title.toUpperCase(), W / 2, 930);
 
-  <!-- footer -->
-  ${logo}
-  <text x="450" y="1155" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="600" letter-spacing="3" fill="#ffffff" opacity="0.35">${escapeXml(data.websiteName.toUpperCase())}</text>
-  <text x="850" y="1155" text-anchor="end" font-family="Arial,sans-serif" font-size="14" fill="#ffffff" opacity="0.25">${new Date(data.generatedAt).toLocaleDateString()}</text>
-</svg>`;
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${selectedPosition.title.toLowerCase().replace(/\s+/g, "-")}-winner.svg`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success("Poster downloaded");
+      // divider
+      ctx.beginPath();
+      ctx.moveTo(200, 965);
+      ctx.lineTo(700, 965);
+      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // vote strip background
+      ctx.save();
+      roundRect(ctx, 250, 985, 400, 80, 16);
+      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      ctx.fill();
+      ctx.restore();
+
+      // vote strip labels
+      ctx.fillStyle = "rgba(215,238,228,0.6)";
+      ctx.font = "600 13px Arial,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("VOTES", W / 2, 1018);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 32px Arial,sans-serif";
+      ctx.fillText(String(winner.votes), W / 2, 1052);
+
+      // congrats line
+      ctx.fillStyle = "rgba(215,238,228,0.7)";
+      ctx.font = "400 18px Arial,sans-serif";
+      ctx.fillText("Congratulations on this achievement", W / 2, 1095);
+
+      // ── logo ─────────────────────────────────────────────────────────────
+      if (logoImg) {
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(logoImg, 50, 1110, 60, 60);
+        ctx.restore();
+      }
+
+      // website name
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.font = "600 15px Arial,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(data.websiteName.toUpperCase(), W / 2, 1155);
+
+      // date
+      ctx.fillStyle = "rgba(255,255,255,0.25)";
+      ctx.font = "400 14px Arial,sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(new Date(data.generatedAt).toLocaleDateString(), 850, 1155);
+
+      // ── export ───────────────────────────────────────────────────────────
+      const pngUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = `${selectedPosition.title.toLowerCase().replace(/\s+/g, "-")}-winner.png`;
+      link.click();
+
+      toast.success("PNG downloaded", { id: "dl" });
+    } catch (err) {
+      console.error(err);
+      toast.error("Download failed — check console for details", { id: "dl" });
+    }
   }
 
   return (
@@ -210,7 +348,7 @@ function PosterGeneratorPage() {
                           <span className="mt-2 block truncate text-base font-semibold">
                             {position.tie ? "Tie" : positionLeaders[0]?.name ?? "No votes yet"}
                           </span>
-                          <span className="mt-1 block text-xs opacity-75">{position.totalVotes} total votes</span>
+                          
                         </span>
                       </Button>
                     );
@@ -224,9 +362,6 @@ function PosterGeneratorPage() {
                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{selectedPosition.title}</p>
                         <h2 className="mt-1 font-display text-2xl font-bold">Automatic winner detection</h2>
                       </div>
-                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                        {selectedPosition.totalVotes} votes cast
-                      </span>
                     </div>
 
                     {selectedPosition.tie ? (
@@ -239,7 +374,7 @@ function PosterGeneratorPage() {
                           </div>
                         </div>
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                          {leaders.map((candidate) => <div key={candidate.id} className="rounded-xl bg-card/70 px-3 py-2 text-sm font-medium">{candidate.name} <span className="text-muted-foreground">· {candidate.votes} votes</span></div>)}
+                          {leaders.map((candidate) => <div key={candidate.id} className="rounded-xl bg-card/70 px-3 py-2 text-sm font-medium">{candidate.name}</div>)}
                         </div>
                       </div>
                     ) : hasWinner ? (
@@ -251,7 +386,7 @@ function PosterGeneratorPage() {
                           <div className="min-w-0">
                             <span className="inline-flex items-center gap-1.5 rounded-full gradient-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground"><Trophy className="h-3 w-3" /> Winner detected</span>
                             <h3 className="mt-2 truncate font-display text-xl font-bold">{leaders[0].name}</h3>
-                            <p className="text-sm text-muted-foreground">{leaders[0].votes} votes · {leaders[0].percentage}% of this position</p>
+                            <p className="text-sm text-muted-foreground">{leaders[0].votes} vote{leaders[0].votes === 1 ? "" : "s"}</p>
                           </div>
                         </div>
                         <Button variant="hero" size="lg" className="mt-5 w-full sm:w-auto" onClick={generatePoster}>
@@ -266,8 +401,8 @@ function PosterGeneratorPage() {
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current vote breakdown</p>
                       {selectedPosition.candidates.map((candidate) => (
                         <div key={candidate.id} className="rounded-2xl border border-border bg-card/45 p-3">
-                          <div className="flex items-center justify-between gap-3 text-sm"><span className="flex min-w-0 items-center gap-2 truncate font-medium">{candidate.isWinner && <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />}{candidate.name}</span><span className="shrink-0 tabular-nums text-muted-foreground">{candidate.votes} · {candidate.percentage}%</span></div>
-                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className={candidate.isWinner ? "h-full gradient-primary" : "h-full bg-muted-foreground/40"} style={{ width: `${candidate.percentage}%` }} /></div>
+                          <div className="flex items-center justify-between gap-3 text-sm"><span className="flex min-w-0 items-center gap-2 truncate font-medium">{candidate.isWinner && <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />}{candidate.name}</span><span className="shrink-0 tabular-nums text-muted-foreground">{candidate.votes} vote{candidate.votes === 1 ? "" : "s"}</span></div>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className={candidate.isWinner ? "h-full gradient-primary" : "h-full bg-muted-foreground/40"} style={{ width: `${Math.min(candidate.percentage, 100)}%` }} /></div>
                         </div>
                       ))}
                     </div>
@@ -338,16 +473,17 @@ function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: 
           <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#f4d27b]">{position.title}</p>
         </div>
 
-        {/* votes strip */}
-        <div className="w-full rounded-xl bg-white/8 px-4 py-2 text-center backdrop-blur-sm">
-          <p className="text-sm font-bold">{winner.votes} votes &nbsp;·&nbsp; {winner.percentage}%</p>
+        {/* vote strip */}
+        <div className="w-full rounded-xl bg-white/[0.08] px-4 py-3 text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50 mb-1">votes</p>
+          <p className="text-2xl font-black text-white">{winner.votes}</p>
         </div>
 
         {/* footer */}
         <div className="flex w-full items-center justify-between">
           {logoUrl
             ? <img src={logoUrl} alt="logo" className="h-6 w-6 rounded object-contain opacity-70" />
-            : <span className="text-[10px] text-white/40">🏫</span>
+            : <span className="text-[10px] text-white/40"></span>
           }
           <span className="text-[9px] font-semibold uppercase tracking-widest text-white/40">{websiteName}</span>
           <span className="text-[9px] text-white/30">{new Date(generatedAt).toLocaleDateString()}</span>
