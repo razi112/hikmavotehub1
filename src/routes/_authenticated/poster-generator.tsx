@@ -206,16 +206,7 @@ function PosterGeneratorPage() {
       ctx.restore();
 
       // top-right election year pill
-      ctx.save();
-      roundRect(ctx, W - 210, 36, 174, 38, 19);
-      ctx.fillStyle = "rgba(244,210,123,0.15)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(244,210,123,0.3)"; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = "#f4d27b";
-      ctx.font = "700 12px Arial,sans-serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("", W - 123, 55);
-      ctx.restore();
+     
 
       const INFO_Y = PHOTO_H + 20;
 
@@ -473,10 +464,6 @@ function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: 
             : <div className="h-4 w-4 rounded-full bg-emerald-500/60" />
           }
           <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/70">{websiteName}</span>
-        </div>
-        {/* top-right election year chip */}
-        <div className="absolute top-4 right-4 rounded-full bg-[#f4d27b]/15 border border-[#f4d27b]/30 px-3 py-1">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-[#f4d27b]">Election 2026</span>
         </div>
       </div>
 
