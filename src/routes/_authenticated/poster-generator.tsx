@@ -75,7 +75,6 @@ function PosterGeneratorPage() {
 
     const W = 900;
     const H = 1200;
-    const PHOTO_H = 744;
 
     // ── helpers ─────────────────────────────────────────────────────────────
     /**
@@ -144,136 +143,156 @@ function PosterGeneratorPage() {
       canvas.height = H;
       const ctx = canvas.getContext("2d")!;
 
-      // background gradient
+      // background
       const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, "#0c3b2e");
-      bg.addColorStop(1, "#061f18");
+      bg.addColorStop(0, "#050e09");
+      bg.addColorStop(1, "#020805");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
+
+      const PHOTO_H = Math.round(H * 0.68);
 
       // ── photo area ───────────────────────────────────────────────────────
       ctx.save();
       ctx.rect(0, 0, W, PHOTO_H);
       ctx.clip();
       if (photoImg) {
-        // Cover-fit with vertical offset
         const imgAspect = photoImg.width / photoImg.height;
         const areaAspect = W / PHOTO_H;
         let drawW: number, drawH: number, drawX: number, drawY: number;
         if (imgAspect > areaAspect) {
-          // image wider than area — fit height, centre horizontally
-          drawH = PHOTO_H;
-          drawW = drawH * imgAspect;
-          drawX = (W - drawW) / 2;
-          drawY = -((PHOTO_H * offsetPct) / 100);
+          drawH = PHOTO_H; drawW = drawH * imgAspect;
+          drawX = (W - drawW) / 2; drawY = -((PHOTO_H * offsetPct) / 100);
         } else {
-          // image taller than area — fit width, shift by offset
-          drawW = W;
-          drawH = drawW / imgAspect;
+          drawW = W; drawH = drawW / imgAspect;
           drawX = 0;
           const maxShift = drawH - PHOTO_H;
           drawY = -((maxShift * offsetPct) / 100);
         }
         ctx.drawImage(photoImg, drawX, drawY, drawW, drawH);
       } else {
-        // fallback initials block
-        ctx.fillStyle = "#134d38";
-        ctx.fillRect(0, 0, W, PHOTO_H);
-        ctx.fillStyle = "rgba(255,255,255,0.12)";
-        ctx.font = "900 320px Arial,sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        const fbg = ctx.createLinearGradient(0, 0, W, PHOTO_H);
+        fbg.addColorStop(0, "#0d3b22"); fbg.addColorStop(1, "#061a0f");
+        ctx.fillStyle = fbg; ctx.fillRect(0, 0, W, PHOTO_H);
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.font = "900 300px Arial,sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(winner.name.charAt(0).toUpperCase(), W / 2, PHOTO_H / 2);
       }
       ctx.restore();
 
-      // gradient fade from photo into panel
-      const fade = ctx.createLinearGradient(0, PHOTO_H - 180, 0, PHOTO_H + 40);
-      fade.addColorStop(0, "rgba(12,59,46,0)");
-      fade.addColorStop(1, "rgba(12,59,46,1)");
+      // multi-stop photo fade
+      const fade = ctx.createLinearGradient(0, PHOTO_H * 0.3, 0, PHOTO_H + 20);
+      fade.addColorStop(0, "rgba(5,14,9,0)");
+      fade.addColorStop(0.55, "rgba(5,14,9,0.55)");
+      fade.addColorStop(1, "rgba(5,14,9,1)");
       ctx.fillStyle = fade;
-      ctx.fillRect(0, PHOTO_H - 180, W, 220);
+      ctx.fillRect(0, 0, W, PHOTO_H + 20);
 
-      // info panel
-      ctx.fillStyle = "#0c3b2e";
+      // info panel bg
+      ctx.fillStyle = "#050e09";
       ctx.fillRect(0, PHOTO_H, W, H - PHOTO_H);
 
-      // ── winner badge ─────────────────────────────────────────────────────
+      // top-left org badge pill
       ctx.save();
-      roundRect(ctx, 300, 762, 300, 44, 22);
-      ctx.strokeStyle = "rgba(244,210,123,0.7)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      roundRect(ctx, 36, 36, 220, 44, 22);
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "700 13px Arial,sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(data.websiteName.toUpperCase(), 56, 58);
+      ctx.restore();
+
+      // top-right election year pill
+      ctx.save();
+      roundRect(ctx, W - 210, 36, 174, 38, 19);
+      ctx.fillStyle = "rgba(244,210,123,0.15)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244,210,123,0.3)"; ctx.lineWidth = 1; ctx.stroke();
       ctx.fillStyle = "#f4d27b";
-      ctx.font = "700 16px Arial,sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.letterSpacing = "5px";
-      ctx.fillText("WINNER", W / 2, 784);
-      ctx.letterSpacing = "0px";
+      ctx.font = "700 12px Arial,sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("", W - 123, 55);
+      ctx.restore();
+
+      const INFO_Y = PHOTO_H + 20;
+
+      // winner gold badge
+      ctx.save();
+      const bw = 160, bh = 36, bx = 50, by = INFO_Y;
+      roundRect(ctx, bx, by, bw, bh, 18);
+      const goldGrad = ctx.createLinearGradient(bx, by, bx + bw, by);
+      goldGrad.addColorStop(0, "#f4d27b"); goldGrad.addColorStop(1, "#e8b84b");
+      ctx.fillStyle = goldGrad; ctx.fill();
+      ctx.fillStyle = "#3a2800";
+      ctx.font = "900 13px Arial,sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("✦ WINNER", bx + bw / 2, by + bh / 2);
       ctx.restore();
 
       // name
       ctx.fillStyle = "#ffffff";
-      ctx.font = "900 58px Arial,sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(winner.name, W / 2, 880);
+      ctx.font = "900 64px Arial,sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+      // wrap long names
+      const nameWords = winner.name.split(" ");
+      const line1 = nameWords.slice(0, Math.ceil(nameWords.length / 2)).join(" ");
+      const line2 = nameWords.slice(Math.ceil(nameWords.length / 2)).join(" ");
+      if (line2) {
+        ctx.fillText(line1, 50, INFO_Y + 105);
+        ctx.fillText(line2, 50, INFO_Y + 175);
+      } else {
+        ctx.font = "900 56px Arial,sans-serif";
+        ctx.fillText(winner.name, 50, INFO_Y + 130);
+      }
 
       // position title
-      ctx.fillStyle = "#f4d27b";
-      ctx.font = "700 22px Arial,sans-serif";
-      ctx.fillText(selectedPosition.title.toUpperCase(), W / 2, 930);
+      ctx.fillStyle = "#4ade80";
+      ctx.font = "600 20px Arial,sans-serif";
+      ctx.textAlign = "left";
+      const nameEndY = line2 ? INFO_Y + 200 : INFO_Y + 155;
+      ctx.fillText(selectedPosition.title.toUpperCase(), 50, nameEndY);
 
       // divider
       ctx.beginPath();
-      ctx.moveTo(200, 965);
-      ctx.lineTo(700, 965);
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.moveTo(50, nameEndY + 24);
+      ctx.lineTo(W - 50, nameEndY + 24);
+      ctx.strokeStyle = "rgba(255,255,255,0.07)"; ctx.lineWidth = 1; ctx.stroke();
 
-      // vote strip background
+      const STATS_Y = nameEndY + 50;
+
+      // votes + percentage stat boxes
       ctx.save();
-      roundRect(ctx, 250, 985, 400, 80, 16);
-      ctx.fillStyle = "rgba(255,255,255,0.07)";
-      ctx.fill();
+      roundRect(ctx, 50, STATS_Y, 340, 90, 16);
+      ctx.fillStyle = "rgba(255,255,255,0.06)"; ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
       ctx.restore();
 
-      // vote strip labels
-      ctx.fillStyle = "rgba(215,238,228,0.6)";
-      ctx.font = "600 13px Arial,sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("VOTES", W / 2, 1018);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 32px Arial,sans-serif";
-      ctx.fillText(String(winner.votes), W / 2, 1052);
-
-      // congrats line
-      ctx.fillStyle = "rgba(215,238,228,0.7)";
-      ctx.font = "400 18px Arial,sans-serif";
-      ctx.fillText("Congratulations on this achievement", W / 2, 1095);
-
-      // ── logo ─────────────────────────────────────────────────────────────
-      if (logoImg) {
-        ctx.save();
-        ctx.globalAlpha = 0.6;
-        ctx.drawImage(logoImg, 50, 1110, 60, 60);
-        ctx.restore();
-      }
-
-      // website name
       ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.font = "600 15px Arial,sans-serif";
+      ctx.font = "600 11px Arial,sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(data.websiteName.toUpperCase(), W / 2, 1155);
+      ctx.fillText("VOTES", 170, STATS_Y + 28);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 40px Arial,sans-serif";
+      ctx.fillText(String(winner.votes), 170, STATS_Y + 72);
 
-      // date
-      ctx.fillStyle = "rgba(255,255,255,0.25)";
-      ctx.font = "400 14px Arial,sans-serif";
-      ctx.textAlign = "right";
-      ctx.fillText(new Date(data.generatedAt).toLocaleDateString(), 850, 1155);
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.font = "600 11px Arial,sans-serif";
+      ctx.fillText("SHARE", 290, STATS_Y + 28);
+      ctx.fillStyle = "#4ade80";
+      ctx.font = "900 40px Arial,sans-serif";
+      ctx.fillText(`${winner.percentage}%`, 290, STATS_Y + 72);
+
+      // congrats + date footer
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.font = "400 16px Arial,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Congratulations on this achievement", W / 2, H - 40);
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.font = "400 13px Arial,sans-serif";
+      ctx.fillText(new Date(data.generatedAt).toLocaleDateString(), W / 2, H - 20);
 
       // ── export ───────────────────────────────────────────────────────────
       const pngUrl = canvas.toDataURL("image/png");
@@ -427,68 +446,99 @@ function PosterGeneratorPage() {
 }
 
 function PosterPreview({ position, winner, websiteName, logoUrl, generatedAt }: { position: PositionResult; winner: ResultCandidate; websiteName: string; logoUrl: string | null; generatedAt: string }) {
-  // Parse optional vertical offset from image_url hash e.g. ashkar.jpg#offset=20
   const rawUrl = winner.image_url ?? "";
   const hashIdx = rawUrl.indexOf("#offset=");
   const cleanUrl = hashIdx !== -1 ? rawUrl.slice(0, hashIdx) : rawUrl;
   const offsetPct = hashIdx !== -1 ? parseInt(rawUrl.slice(hashIdx + 8), 10) : 0;
-  // object-position: center <offsetPct>% — higher number = image shifts UP (face appears more)
   const objPosition = `center ${offsetPct}%`;
-  return (
-    <div className="relative aspect-[3/4] overflow-hidden rounded-[2rem] bg-[#0c3b2e] text-white shadow-lift">
 
-      {/* ── full-bleed photo top 62% ── */}
-      <div className="absolute inset-x-0 top-0 h-[62%]">
-        {winner.image_url ? (
-          <img
-            src={cleanUrl}
-            alt={winner.name}
-            className="h-full w-full object-cover"
-            style={{ objectPosition: objPosition }}
-          />
+  return (
+    <div className="relative aspect-[3/4] overflow-hidden rounded-[2rem] bg-[#050e09] text-white select-none">
+
+      {/* ── full-bleed photo — top 68% ── */}
+      <div className="absolute inset-x-0 top-0 h-[68%]">
+        {cleanUrl ? (
+          <img src={cleanUrl} alt={winner.name} className="h-full w-full object-cover" style={{ objectPosition: objPosition }} />
         ) : (
-          <div className="grid h-full place-items-center bg-primary/20">
-            <span className="font-display text-[8rem] font-black text-white/30">
-              {winner.name.charAt(0)}
-            </span>
+          <div className="h-full w-full bg-gradient-to-br from-emerald-900 to-emerald-950 grid place-items-center">
+            <span className="font-black text-[9rem] text-white/10">{winner.name.charAt(0)}</span>
           </div>
         )}
-        {/* gradient fade into bottom panel */}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0c3b2e] to-transparent" />
+        {/* multi-stop fade */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050e09] via-[#050e09]/30 to-transparent" style={{ background: 'linear-gradient(to top, #050e09 0%, rgba(5,14,9,0.55) 40%, transparent 70%)' }} />
+        {/* top-left org badge */}
+        <div className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1.5">
+          {logoUrl
+            ? <img src={logoUrl} alt="" className="h-5 w-5 rounded-full object-contain" />
+            : <div className="h-4 w-4 rounded-full bg-emerald-500/60" />
+          }
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/70">{websiteName}</span>
+        </div>
+        {/* top-right election year chip */}
+        <div className="absolute top-4 right-4 rounded-full bg-[#f4d27b]/15 border border-[#f4d27b]/30 px-3 py-1">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[#f4d27b]">Election 2026</span>
+        </div>
       </div>
 
-      {/* ── bottom info panel ── */}
-      <div className="absolute inset-x-0 bottom-0 h-[42%] flex flex-col items-center justify-between px-6 pb-5 pt-4">
-        {/* winner badge */}
-        <div className="flex items-center gap-2 rounded-full border border-[#f4d27b]/60 bg-[#f4d27b]/10 px-4 py-1.5">
-          <svg className="h-3.5 w-3.5 text-[#f4d27b]" viewBox="0 0 24 24" fill="currentColor">
+      {/* ── info card — bottom 36% ── */}
+      <div className="absolute inset-x-0 bottom-0 h-[36%] flex flex-col px-5 pt-3 pb-4 gap-2">
+
+        {/* winner crown badge */}
+        <div className="flex items-center gap-2 self-start rounded-full bg-gradient-to-r from-[#f4d27b] to-[#e8b84b] px-3 py-1 shadow-[0_2px_12px_rgba(244,210,123,0.4)]">
+          <svg className="h-3 w-3 text-[#3a2800]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/>
           </svg>
-          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#f4d27b]">Winner</span>
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#3a2800]">Winner</span>
         </div>
 
-        {/* name */}
-        <div className="text-center">
-          <p className="font-display text-xl font-black leading-tight sm:text-2xl">{winner.name}</p>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#f4d27b]">{position.title}</p>
+        {/* name + position */}
+        <div className="flex-1 min-h-0">
+          <p className="font-black leading-[1.1] text-white" style={{ fontSize: 'clamp(1.1rem, 4.5cqw, 1.5rem)' }}>
+            {winner.name}
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">
+            {position.title}
+          </p>
         </div>
 
-        {/* vote strip */}
-        <div className="w-full rounded-xl bg-white/[0.08] px-4 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50 mb-1">votes</p>
-          <p className="text-2xl font-black text-white">{winner.votes}</p>
+        {/* stats row */}
+        <div className="flex items-center gap-2">
+          {/* votes pill */}
+          <div className="flex items-center gap-2 rounded-xl bg-white/[0.07] border border-white/[0.08] backdrop-blur-sm px-3 py-2 flex-1">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-semibold uppercase tracking-widest text-white/40">Votes</span>
+              <span className="text-lg font-black text-white tabular-nums leading-none">{winner.votes}</span>
+            </div>
+            <div className="ml-auto h-8 w-[2px] rounded-full bg-white/10" />
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] font-semibold uppercase tracking-widest text-white/40">Share</span>
+              <span className="text-lg font-black text-emerald-400 tabular-nums leading-none">{winner.percentage}%</span>
+            </div>
+          </div>
+
+          {/* decorative ring */}
+          <div className="relative h-12 w-12 shrink-0">
+            <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+              <circle cx="24" cy="24" r="20" fill="none" stroke="#22c55e" strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${(winner.percentage / 100) * (2 * Math.PI * 20)} ${2 * Math.PI * 20}`}
+                style={{ filter: 'drop-shadow(0 0 4px rgba(34,197,94,0.7))' }} />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-white">{winner.percentage}%</span>
+          </div>
         </div>
 
-        {/* footer */}
-        <div className="flex w-full items-center justify-between">
-          {logoUrl
-            ? <img src={logoUrl} alt="logo" className="h-6 w-6 rounded object-contain opacity-70" />
-            : <span className="text-[10px] text-white/40"></span>
-          }
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-white/40">{websiteName}</span>
-          <span className="text-[9px] text-white/30">{new Date(generatedAt).toLocaleDateString()}</span>
+        {/* footer line */}
+        <div className="flex items-center justify-between pt-1 border-t border-white/[0.07]">
+          <span className="text-[8px] text-white/25 tracking-wider">Congratulations on this achievement</span>
+          <span className="text-[8px] text-white/25">{new Date(generatedAt).toLocaleDateString()}</span>
         </div>
       </div>
+
+      {/* decorative corner accent */}
+      <div className="pointer-events-none absolute bottom-[35%] right-4 h-16 w-16 rounded-full border border-emerald-500/20 blur-[1px]" />
+      <div className="pointer-events-none absolute bottom-[36%] right-8 h-8 w-8 rounded-full border border-[#f4d27b]/15" />
     </div>
   );
 }
