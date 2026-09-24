@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, Trophy, Users, BarChart3, Star, Zap, CheckCircle2, ChevronRight } from "lucide-react";
+import { Crown, Trophy, Users, BarChart3, Star, Zap, CheckCircle2, ChevronRight, Link2, Download, Lock, PieChart, BadgeCheck } from "lucide-react";
 import { Confetti } from "@/components/confetti";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -213,9 +213,11 @@ function AnalyzingScreen({ onDone }: { onDone: () => void }) {
           <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(34,197,94,0.15)" strokeWidth="1" strokeDasharray="4 8" />
         </svg>
         <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 backdrop-blur-sm border border-emerald-500/20">
-          <span className="text-3xl" style={{ animation: "rv-fadein 0.3s ease" }} key={step}>
-            {["🔗","📥","🔐","📊","✅"][step]}
-          </span>
+          {(() => {
+            const icons = [Link2, Download, Lock, PieChart, BadgeCheck];
+            const Icon = icons[step] ?? Link2;
+            return <Icon className="h-8 w-8 text-emerald-400" style={{ animation: "rv-fadein 0.3s ease" }} key={step} />;
+          })()}
         </div>
         {/* pct label */}
         <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 font-mono text-xs font-bold text-emerald-400 tabular-nums">
@@ -260,7 +262,7 @@ function AnalyzingScreen({ onDone }: { onDone: () => void }) {
                 isDone   ? "bg-emerald-500 text-white" :
                 isActive ? "bg-white/20 text-white" :
                            "bg-white/5 text-white/20")}>
-                {isDone ? "✓" : i + 1}
+                {isDone ? <CheckCircle2 className="h-3 w-3" /> : i + 1}
               </span>
               {s.label}
               {isActive && (
